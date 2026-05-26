@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SariHub — Palengke-on-Wheels</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"/>
+  <link rel="stylesheet" href="tokens.css"/>
+  <style>
+    body { margin: 0; background: #f0eee9; font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="ui.jsx"></script>
+  <script type="text/babel" src="style-frame.jsx"></script>
+  <script type="text/babel" src="screens-mobile.jsx"></script>
+  <script type="text/babel" src="screens-others.jsx"></script>
+  <script type="text/babel" src="components-and-flows.jsx"></script>
+
+  <script type="text/babel">
+    const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+
+    const App = () => (
+      <DesignCanvas>
+        <DCSection id="style" title="Style frame" subtitle="Palette, type, and the sample product card.">
+          <DCArtboard id="moodboard" label="01 · Mood board" width={1280} height={1000}>
+            <StyleFrame/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="mobile" title="Mobile screens" subtitle="390×844 · Tagalog leads, English supports.">
+          <DCArtboard id="otp-phone" label="02 · OTP — phone" width={390} height={844}>
+            <OtpPhoneScreen/>
+          </DCArtboard>
+          <DCArtboard id="otp-code" label="03 · OTP — code" width={390} height={844}>
+            <OtpCodeScreen/>
+          </DCArtboard>
+          <DCArtboard id="home" label="04 · Home — today's palengke run" width={390} height={844}>
+            <HomeScreen/>
+          </DCArtboard>
+          <DCArtboard id="cart" label="05 · Cart sheet" width={390} height={844}>
+            <CartSheetScreen/>
+          </DCArtboard>
+          <DCArtboard id="confirm" label="06 · Order placed" width={390} height={844}>
+            <ConfirmScreen/>
+          </DCArtboard>
+          <DCArtboard id="history" label="07 · Order history" width={390} height={844}>
+            <HistoryScreen/>
+          </DCArtboard>
+          <DCArtboard id="suki" label="08 · Suki ledger" width={390} height={844}>
+            <SukiScreen/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="edge" title="Edge cases" subtitle="Designed explicitly — these are not error states, they're normal life.">
+          <DCArtboard id="cutoff" label="09 · After cutoff" width={390} height={844}>
+            <HomeScreen cutoffPassed/>
+          </DCArtboard>
+          <DCArtboard id="suki-exceeded" label="10 · Suki limit exceeded" width={390} height={844}>
+            <HomeScreen sukiExceeded/>
+          </DCArtboard>
+          <DCArtboard id="offline" label="11 · Offline · queued" width={390} height={844}>
+            <HomeScreen offline/>
+          </DCArtboard>
+          <DCArtboard id="item-out" label="12 · Item went out of stock" width={390} height={844}>
+            <HistoryScreen withItemOut/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="driver" title="Driver" subtitle="Phone in a moving Tamaraw, one-handed, gloves.">
+          <DCArtboard id="driver-route" label="13 · Route + current stop" width={390} height={844}>
+            <DriverScreen/>
+          </DCArtboard>
+          <DCArtboard id="driver-pod" label="14 · Proof of delivery + signature" width={390} height={844}>
+            <DriverScreen podMode/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="admin" title="Admin" subtitle="Tablet for buyer team at 5 AM; desktop for dispatch.">
+          <DCArtboard id="admin-prices" label="15 · Daily price entry · 1024px" width={1024} height={768}>
+            <AdminPricesScreen/>
+          </DCArtboard>
+          <DCArtboard id="admin-dispatch" label="16 · Today's dispatch · 1440px" width={1440} height={900}>
+            <AdminDispatchScreen/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="components" title="System" subtitle="Primitives + microcopy.">
+          <DCArtboard id="inventory" label="17 · Component inventory" width={1280} height={1820}>
+            <ComponentInventory/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="flows" title="Flows" subtitle="Two journeys that have to be right.">
+          <DCArtboard id="flow-owner" label="18 · Owner first order + driver POD" width={1280} height={880}>
+            <FlowDiagrams/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+/* SariHub design tokens — locked from brief */
+:root {
+  --bg: #FAF7F2;
+  --bg-dark: #1A1815;
+  --surface: #FFFFFF;
+  --surface-2: #F4F0E8;
+  --action: #D85A30;
+  --action-press: #B84A24;
+  --success: #1D9E75;
+  --success-soft: #E6F4EE;
+  --warning: #BA7517;
+  --warning-soft: #F8EFD9;
+  --danger: #B4332A;
+  --ink: #2C2C2A;
+  --ink-2: #5F5E5A;
+  --ink-3: #8A8880;
+  --hair: #E8E4DC;
+  --hair-strong: #D8D2C4;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --tap: 48px;
+}
+
+/* Phone frame normalization */
+.sh, .sh * { box-sizing: border-box; }
+.sh {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: "cv11", "ss01", "ss03";
+  color: var(--ink);
+  background: var(--bg);
+  width: 390px;
+  height: 844px;
+  position: relative;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.sh-display { font-family: 'Inter', -apple-system, sans-serif; font-feature-settings: "tnum", "cv11"; letter-spacing: -0.01em; }
+.sh .tnum { font-variant-numeric: tabular-nums; }
+
+/* Neutral phone chrome — reads as Android but with iPhone-ish notch room */
+.sh-statusbar {
+  height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px 0 24px;
+  font: 500 14px/1 'Inter', sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  position: relative;
+  z-index: 5;
+}
+.sh-statusbar .sb-right { display: flex; align-items: center; gap: 6px; }
+.sh-statusbar svg { display: block; }
+
+.sh-homebar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 22px; display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 8px;
+  pointer-events: none;
+}
+.sh-homebar::after {
+  content: ''; width: 134px; height: 5px; border-radius: 3px;
+  background: rgba(0,0,0,0.55);
+}
+
+/* Tablet/desktop frames */
+.tab {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-feature-settings: "cv11";
+  color: var(--ink);
+  background: var(--bg);
+  width: 1024px; height: 768px;
+  overflow: hidden; position: relative;
+}
+.desk {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  width: 1440px; height: 900px;
+  overflow: hidden; position: relative;
+}
+.tab *, .tab, .desk *, .desk { box-sizing: border-box; }
+
+/* Utility */
+.hair { background: var(--hair); }
+.hair-b { border-bottom: 1px solid var(--hair); }
+.hair-t { border-top: 1px solid var(--hair); }
+.hair-r { border-right: 1px solid var(--hair); }
+.hair-l { border-left: 1px solid var(--hair); }
+
+/* Striped image placeholder */
+.ph {
+  background:
+    repeating-linear-gradient(135deg, #EFEAE0 0 6px, #E8E2D4 6px 12px);
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.ph-label {
+  font: 400 9px/1 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
+  color: #8A8068;
+  background: rgba(255,255,255,0.65);
+  padding: 2px 4px; border-radius: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Pills */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: var(--radius-pill);
+  font: 500 12px/1.2 'Inter', sans-serif;
+}
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  height: var(--tap);
+  padding: 0 18px;
+  border-radius: var(--radius);
+  border: 0;
+  font: 500 15px/1 'Inter', sans-serif;
+  cursor: pointer;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--action); color: #fff; }
+.btn-primary:active { background: var(--action-press); }
+.btn-secondary { background: #fff; color: var(--ink); border: 1px solid var(--hair-strong); }
+.btn-ghost { background: transparent; color: var(--ink); }
+.btn-danger { background: #fff; color: var(--danger); border: 1px solid #EBD3CF; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-warning { background: var(--warning); color: #fff; }
+.btn-block { width: 100%; }
+
+/* Inputs */
+.inp {
+  width: 100%; height: 52px;
+  border-radius: var(--radius);
+  border: 1px solid var(--hair-strong);
+  background: #fff;
+  padding: 0 14px;
+  font: 500 16px 'Inter', sans-serif;
+  color: var(--ink);
+  outline: none;
+}
+.inp:focus { border-color: var(--action); box-shadow: 0 0 0 3px rgba(216,90,48,0.15); }
+
+/* Tabular numerals everywhere prices live */
+.price { font-variant-numeric: tabular-nums; }
+
+/* Card */
+.card {
+  background: #fff;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+}
+
+/* Tap-row product chip buttons */
+.unit-btn {
+  flex: 1; min-width: 0; height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--hair-strong);
+  background: #fff;
+  font: 500 13px 'Inter', sans-serif;
+  color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.unit-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* Tagalog/English label stack */
+.lbl-tag { font: 500 15px/1.2 'Inter', sans-serif; color: var(--ink); }
+.lbl-en { font: 400 12px/1.2 'Inter', sans-serif; color: var(--ink-2); }
