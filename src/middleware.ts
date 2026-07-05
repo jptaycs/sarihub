@@ -32,7 +32,8 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const isAuthRoute =
+    pathname.startsWith("/login") || pathname.startsWith("/verify") || pathname.startsWith("/auth");
   const isPublic = isAuthRoute || pathname.startsWith("/_next") || pathname === "/favicon.ico";
 
   if (!user && !isPublic) {

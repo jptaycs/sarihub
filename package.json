@@ -29,10 +29,10 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "drizzle-orm": "^0.36.4",
-    "next": "^15.0.3",
+    "next": "^15.1.0",
     "postgres": "^3.4.5",
-    "react": "19.0.0-rc-66855b96-20241106",
-    "react-dom": "19.0.0-rc-66855b96-20241106",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "react-hook-form": "^7.53.2",
     "superjson": "^2.2.1",
     "tailwind-merge": "^2.5.4",
@@ -44,21 +44,17 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
     "@types/node": "^22.9.0",
-    "@types/react": "npm:types-react@rc",
-    "@types/react-dom": "npm:types-react-dom@rc",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.3",
     "drizzle-kit": "^0.28.1",
     "eslint": "^9.14.0",
-    "eslint-config-next": "^15.0.3",
+    "eslint-config-next": "^15.1.0",
     "happy-dom": "^15.10.2",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
     "tailwindcss": "^4.0.0-beta.4",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
-  },
-  "overrides": {
-    "@types/react": "npm:types-react@rc",
-    "@types/react-dom": "npm:types-react-dom@rc"
   }
 }

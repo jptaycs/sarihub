@@ -46,3 +46,61 @@ If you're writing code that doesn't serve one of these four users, you're writin
 Do not introduce new libraries without justification in the PR description. If you need a date library, use `date-fns`. If you need a form library, use `react-hook-form` with `zod` schemas (the same schemas back tRPC inputs — single source of truth).
 
 ## Project structure
+
+```
+src/
+  app/                  Routes. (auth)/login + (auth)/verify, home (owner catalog + cart),
+                        orders (owner order history), api/trpc/[trpc]
+  components/ui/        Shared primitives (Button, Input, Logo)
+  lib/                  Client-safe helpers: format (peso/phone), datetime (Manila tz),
+                        deliverySchedule (cutoff + weekday bitmask), useCart, schemas/ (zod,
+                        shared by forms and tRPC inputs), supabase/, trpc/
+  server/
+    db/schema/          Drizzle schema, one file per domain
+    routers/            tRPC routers (catalog, store, orders)
+    services/           Business logic the routers stay thin over (auth, orders)
+    trpc/               init (context, procedures) + root router
+drizzle/                Generated migrations + RLS/trigger SQL + seed.sql
+```
+
+Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datetime`, never `new Date()`. Tagalog-first copy in every user-facing string.
+
+## Roadmap / to-do
+
+Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check items off as they land.
+
+### Done
+- [x] Scaffold: Next.js 15 + tRPC + Drizzle + Supabase, phone-OTP auth flow (login → verify → home)
+- [x] Schema for the whole domain: catalog + append-only `daily_prices`, orders with locked prices, stores, suki ledger (balance kept by DB trigger), routes, inventory. Migration 0000 + RLS/triggers generated
+- [x] Owner ordering (the wedge): `catalog.today`, `orders.place` (price locking, suki limit check under `FOR UPDATE`, idempotency key, ledger charge in one transaction), `orders.list`
+- [x] Owner UI: catalog browse/search, unit steppers, localStorage cart, confirm sheet with delivery day, `/orders` history
+- [x] Dev seed (`drizzle/seed.sql`): Lucena route, 10 products with multi-unit SKUs, today's prices, auto-store per auth user
+
+### Now: make it real
+- [ ] Wire up a live Supabase project: `.env` from `.env.example`, apply migration 0000 + RLS SQL, run seed, verify login → browse → order end-to-end on a phone
+- [ ] Order detail page for owners (`/orders/[id]`): line items with locked prices, status timeline, cancelled-item display
+- [ ] Owner order cancellation (only while `submitted`, before route cutoff)
+
+### Next: buyer flow (5 AM palengke)
+- [ ] Buyer role + route guard (staff table or role claim; owners must not see buyer screens)
+- [ ] Daily price entry screen: today's list, big tap targets, "carry over from yesterday" bulk action, per-unit price edit writes a new `daily_prices` row (never UPDATE)
+- [ ] Mark unit out-of-stock for today (drives `cancelled_item` on affected submitted orders + recompute totals)
+
+### Then: admin
+- [ ] Admin role + `/admin` layout (tablet/laptop)
+- [ ] Catalog management: products + units CRUD, activate/deactivate
+- [ ] Orders kanban: submitted → packed → in_transit → delivered, per route, with route load total vs `capacity_kg`
+- [ ] Suki exposure view: balances vs limits, record payments (ledger `payment` rows), adjustment entries with reason
+- [ ] Store management: create store, assign route, set suki limit
+
+### Then: driver
+- [ ] Driver role + today's ordered stop list per route
+- [ ] Big "Naihatid" button per stop; POD photo (Supabase Storage) + signature pad for suki
+- [ ] Mapbox route view (last — the stop list works without it)
+
+### Cross-cutting, schedule when the flows above exist
+- [ ] SMS via Semaphore: order confirmed, out for delivery, delivered (queue + retry, don't block the mutation)
+- [ ] PWA: manifest, icons, service worker; offline shell for owner browse and buyer price entry
+- [ ] RLS audit once buyer/admin/driver roles exist (current policies assume owner-only access)
+- [ ] Playwright e2e for the money path: login → order → price lock survives a next-day price change
+- [ ] Payments via PayMongo (explicitly later — suki tab is the MVP payment method)
