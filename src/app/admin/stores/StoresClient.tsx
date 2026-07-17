@@ -167,7 +167,7 @@ function CreateStoreForm(props: {
   const [limitDraft, setLimitDraft] = useState("2000");
   const form = useForm<CreateStoreInput>({
     resolver: zodResolver(createStoreInput),
-    defaultValues: { routeId: null, sukiLimitCentavos: 200000 },
+    defaultValues: { routeId: null, stopOrder: null, sukiLimitCentavos: 200000 },
   });
 
   return (
@@ -192,6 +192,16 @@ function CreateStoreForm(props: {
           routes={props.routes}
           {...form.register("routeId", {
             setValueAs: (v: string) => (v === "" ? null : v),
+          })}
+        />
+      </Field>
+      <Field label="Pang-ilang hinto sa ruta" error={form.formState.errors.stopOrder?.message}>
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder="hal. 3"
+          {...form.register("stopOrder", {
+            setValueAs: (v: string) => (v === "" || v === null ? null : Number(v)),
           })}
         />
       </Field>
@@ -245,6 +255,7 @@ function UpdateStoreForm(props: {
       ownerName: store.ownerName,
       addressLine: store.addressLine ?? undefined,
       routeId: store.routeId,
+      stopOrder: store.stopOrder,
       sukiLimitCentavos: Number(store.sukiLimitCentavos),
     },
   });
@@ -269,6 +280,16 @@ function UpdateStoreForm(props: {
           defaultValue={store.routeId ?? ""}
           {...form.register("routeId", {
             setValueAs: (v: string) => (v === "" ? null : v),
+          })}
+        />
+      </Field>
+      <Field label="Pang-ilang hinto sa ruta" error={form.formState.errors.stopOrder?.message}>
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder="hal. 3"
+          {...form.register("stopOrder", {
+            setValueAs: (v: string) => (v === "" || v === null ? null : Number(v)),
           })}
         />
       </Field>

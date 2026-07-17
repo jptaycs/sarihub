@@ -94,13 +94,13 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] Store management (`/admin/stores`): create store (binds an existing phone-OTP auth user by number), assign route, set suki limit
 
 ### Then: driver
-- [ ] Driver role + today's ordered stop list per route
-- [ ] Big "Naihatid" button per stop; POD photo (Supabase Storage) + signature pad for suki
+- [x] Driver role + today's ordered stop list per route (`/driver`; `stores.stop_order` from migration 0003, settable in `/admin/stores`; route picker skipped when there's one truck)
+- [x] Big "Naihatid" button per stop; POD photo + signature pad, best-effort upload to the private `pod` Storage bucket (bucket + policies in 0003 RLS SQL) — a dead zone never blocks the handoff
 - [ ] Mapbox route view (last — the stop list works without it)
 
 ### Cross-cutting, schedule when the flows above exist
 - [ ] SMS via Semaphore: order confirmed, out for delivery, delivered (queue + retry, don't block the mutation)
-- [ ] PWA: manifest, icons, service worker; offline shell for owner browse and buyer price entry
-- [ ] RLS audit once buyer/admin/driver roles exist (current policies assume owner-only access)
-- [ ] Playwright e2e for the money path: login → order → price lock survives a next-day price change
+- [x] PWA: manifest + SVG icon, `public/sw.js` (network-first navigations with cached-shell fallback, cache-first static assets, `/api` and `/auth` never cached), `/offline` fallback page
+- [x] RLS audit for staff roles: staff-wide SELECT policies on stores/orders/items/ledger/prices/catalog via `is_active_staff()` (0003 RLS SQL); writes stay server-side
+- [ ] Playwright e2e for the money path: login → order → price lock survives a next-day price change (needs the live project)
 - [ ] Payments via PayMongo (explicitly later — suki tab is the MVP payment method)

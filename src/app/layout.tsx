@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { Providers } from "./providers";
+import { RegisterSW } from "./RegisterSW";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="tl" className={inter.variable}>
       <body>
         <Providers>{children}</Providers>
+        <RegisterSW />
       </body>
     </html>
   );

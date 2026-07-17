@@ -74,3 +74,11 @@ export const adminProcedure = staffProcedure.use(async ({ ctx, next }) => {
   }
   return next();
 });
+
+/** Driver screens: today's stops, delivery confirmation. Admins can cover a route. */
+export const driverProcedure = staffProcedure.use(async ({ ctx, next }) => {
+  if (ctx.staff.role !== "driver" && ctx.staff.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Para sa driver lamang po ito." });
+  }
+  return next();
+});

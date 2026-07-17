@@ -66,6 +66,8 @@ export const createStoreInput = z.object({
   phone: z.string().trim().min(1, "Kailangan ang numero."),
   addressLine: z.string().trim().max(300).optional(),
   routeId: z.string().uuid().nullable(),
+  /** Position along the route's morning run; null = not sequenced yet. */
+  stopOrder: z.number().int().min(1).max(999).nullable(),
   sukiLimitCentavos: z.number().int().min(0).max(100_000_000),
 });
 export type CreateStoreInput = z.infer<typeof createStoreInput>;
@@ -76,6 +78,7 @@ export const updateStoreInput = z.object({
   ownerName: z.string().trim().min(1).max(120),
   addressLine: z.string().trim().max(300).optional(),
   routeId: z.string().uuid().nullable(),
+  stopOrder: z.number().int().min(1).max(999).nullable(),
   sukiLimitCentavos: z.number().int().min(0).max(100_000_000),
 });
 export type UpdateStoreInput = z.infer<typeof updateStoreInput>;

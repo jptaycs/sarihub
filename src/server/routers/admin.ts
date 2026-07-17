@@ -306,6 +306,7 @@ const storesAdminRouter = router({
         addressLine: stores.addressLine,
         routeId: stores.routeId,
         routeName: routes.name,
+        stopOrder: stores.stopOrder,
         sukiLimitCentavos: stores.sukiLimitCentavos,
         sukiBalanceCentavos: stores.sukiBalanceCentavos,
       })
@@ -370,6 +371,7 @@ const storesAdminRouter = router({
           phoneE164,
           addressLine: input.addressLine ?? null,
           routeId: input.routeId,
+          stopOrder: input.stopOrder,
           sukiLimitCentavos: BigInt(input.sukiLimitCentavos),
         })
         .returning({ id: stores.id });

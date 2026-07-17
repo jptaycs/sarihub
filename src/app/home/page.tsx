@@ -12,6 +12,9 @@ export default async function HomePage() {
   if (staffRow?.role === "buyer") {
     redirect("/buyer/prices");
   }
+  if (staffRow?.role === "driver") {
+    redirect("/driver");
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col px-5 pb-10 pt-2">

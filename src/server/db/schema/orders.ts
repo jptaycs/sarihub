@@ -49,6 +49,10 @@ export const orders = pgTable("orders", {
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   cancelledReason: text("cancelled_reason"),
 
+  /** Proof of delivery: Supabase Storage paths in the `pod` bucket. */
+  podPhotoPath: text("pod_photo_path"),
+  podSignaturePath: text("pod_signature_path"),
+
   ...timestampColumns,
 });
 

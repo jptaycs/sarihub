@@ -34,7 +34,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/verify") || pathname.startsWith("/auth");
-  const isPublic = isAuthRoute || pathname.startsWith("/_next") || pathname === "/favicon.ico";
+  // /offline stays public so the service worker can precache it before sign-in.
+  const isPublic =
+    isAuthRoute ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/offline";
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
@@ -52,5 +57,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
