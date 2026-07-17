@@ -48,7 +48,11 @@ export function OrdersClient() {
       {orders.map((order) => {
         const status = STATUS_LABEL[order.status] ?? STATUS_LABEL.draft!;
         return (
-          <div key={order.id} className="hair-b py-3.5">
+          <Link
+            key={order.id}
+            href={`/orders/${order.id}`}
+            className="hair-b block py-3.5 active:bg-surface-2"
+          >
             <div className="flex items-center justify-between">
               <span className="text-[14px] font-medium">
                 Dating: {formatManilaDate(order.deliverOn)}
@@ -70,7 +74,7 @@ export function OrdersClient() {
             <div className="price mt-1.5 text-[14px] font-medium">
               {formatPeso(order.totalCentavos)}
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>

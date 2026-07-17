@@ -27,32 +27,32 @@ INSERT INTO products (id, name_tl, name_en, category, is_perishable, source) VAL
   ('bbbbbbbb-0010-0000-0000-000000000000', 'Asukal',     'White sugar', 'kusina', false, 'warehouse')
 ON CONFLICT (id) DO NOTHING;
 
--- ── Units (the unit is part of the SKU) ──────────────────────────────────────
-INSERT INTO product_units (id, product_id, label_tl, label_en, sort_order) VALUES
-  ('cccccccc-0001-0000-0000-000000000001', 'bbbbbbbb-0001-0000-0000-000000000000', 'piraso',      'per piece',   '01'),
-  ('cccccccc-0001-0000-0000-000000000002', 'bbbbbbbb-0001-0000-0000-000000000000', '1/4 kilo',    'quarter kg',  '02'),
-  ('cccccccc-0001-0000-0000-000000000003', 'bbbbbbbb-0001-0000-0000-000000000000', '1 kilo',      'per kg',      '03'),
-  ('cccccccc-0001-0000-0000-000000000004', 'bbbbbbbb-0001-0000-0000-000000000000', 'sako 5 kilo', '5 kg sack',   '04'),
-  ('cccccccc-0002-0000-0000-000000000001', 'bbbbbbbb-0002-0000-0000-000000000000', '100 gramo',   '100 g',       '01'),
-  ('cccccccc-0002-0000-0000-000000000002', 'bbbbbbbb-0002-0000-0000-000000000000', '1/4 kilo',    'quarter kg',  '02'),
-  ('cccccccc-0002-0000-0000-000000000003', 'bbbbbbbb-0002-0000-0000-000000000000', '1 kilo',      'per kg',      '03'),
-  ('cccccccc-0003-0000-0000-000000000001', 'bbbbbbbb-0003-0000-0000-000000000000', '1/4 kilo',    'quarter kg',  '01'),
-  ('cccccccc-0003-0000-0000-000000000002', 'bbbbbbbb-0003-0000-0000-000000000000', '1 kilo',      'per kg',      '02'),
-  ('cccccccc-0004-0000-0000-000000000001', 'bbbbbbbb-0004-0000-0000-000000000000', 'piraso',      'per head',    '01'),
-  ('cccccccc-0004-0000-0000-000000000002', 'bbbbbbbb-0004-0000-0000-000000000000', '1 kilo',      'per kg',      '02'),
-  ('cccccccc-0005-0000-0000-000000000001', 'bbbbbbbb-0005-0000-0000-000000000000', 'piraso',      'per piece',   '01'),
-  ('cccccccc-0005-0000-0000-000000000002', 'bbbbbbbb-0005-0000-0000-000000000000', 'dosena',      'dozen',       '02'),
-  ('cccccccc-0005-0000-0000-000000000003', 'bbbbbbbb-0005-0000-0000-000000000000', 'tray (30)',   'tray of 30',  '03'),
-  ('cccccccc-0006-0000-0000-000000000001', 'bbbbbbbb-0006-0000-0000-000000000000', '1/2 kilo',    'half kg',     '01'),
-  ('cccccccc-0006-0000-0000-000000000002', 'bbbbbbbb-0006-0000-0000-000000000000', '1 kilo',      'per kg',      '02'),
-  ('cccccccc-0007-0000-0000-000000000001', 'bbbbbbbb-0007-0000-0000-000000000000', '500 ml',      '500 ml',      '01'),
-  ('cccccccc-0007-0000-0000-000000000002', 'bbbbbbbb-0007-0000-0000-000000000000', '1 litro',     '1 liter',     '02'),
-  ('cccccccc-0008-0000-0000-000000000001', 'bbbbbbbb-0008-0000-0000-000000000000', 'bote 385 ml', '385 ml',      '01'),
-  ('cccccccc-0008-0000-0000-000000000002', 'bbbbbbbb-0008-0000-0000-000000000000', '1 litro',     '1 liter',     '02'),
-  ('cccccccc-0009-0000-0000-000000000001', 'bbbbbbbb-0009-0000-0000-000000000000', 'bote 385 ml', '385 ml',      '01'),
-  ('cccccccc-0009-0000-0000-000000000002', 'bbbbbbbb-0009-0000-0000-000000000000', '1 litro',     '1 liter',     '02'),
-  ('cccccccc-0010-0000-0000-000000000001', 'bbbbbbbb-0010-0000-0000-000000000000', '1/2 kilo',    'half kg',     '01'),
-  ('cccccccc-0010-0000-0000-000000000002', 'bbbbbbbb-0010-0000-0000-000000000000', '1 kilo',      'per kg',      '02')
+-- ── Units (the unit is part of the SKU; weight feeds the truck load check) ──
+INSERT INTO product_units (id, product_id, label_tl, label_en, sort_order, weight_grams) VALUES
+  ('cccccccc-0001-0000-0000-000000000001', 'bbbbbbbb-0001-0000-0000-000000000000', 'piraso',      'per piece',   '01',  100),
+  ('cccccccc-0001-0000-0000-000000000002', 'bbbbbbbb-0001-0000-0000-000000000000', '1/4 kilo',    'quarter kg',  '02',  250),
+  ('cccccccc-0001-0000-0000-000000000003', 'bbbbbbbb-0001-0000-0000-000000000000', '1 kilo',      'per kg',      '03', 1000),
+  ('cccccccc-0001-0000-0000-000000000004', 'bbbbbbbb-0001-0000-0000-000000000000', 'sako 5 kilo', '5 kg sack',   '04', 5000),
+  ('cccccccc-0002-0000-0000-000000000001', 'bbbbbbbb-0002-0000-0000-000000000000', '100 gramo',   '100 g',       '01',  100),
+  ('cccccccc-0002-0000-0000-000000000002', 'bbbbbbbb-0002-0000-0000-000000000000', '1/4 kilo',    'quarter kg',  '02',  250),
+  ('cccccccc-0002-0000-0000-000000000003', 'bbbbbbbb-0002-0000-0000-000000000000', '1 kilo',      'per kg',      '03', 1000),
+  ('cccccccc-0003-0000-0000-000000000001', 'bbbbbbbb-0003-0000-0000-000000000000', '1/4 kilo',    'quarter kg',  '01',  250),
+  ('cccccccc-0003-0000-0000-000000000002', 'bbbbbbbb-0003-0000-0000-000000000000', '1 kilo',      'per kg',      '02', 1000),
+  ('cccccccc-0004-0000-0000-000000000001', 'bbbbbbbb-0004-0000-0000-000000000000', 'piraso',      'per head',    '01', 1000),
+  ('cccccccc-0004-0000-0000-000000000002', 'bbbbbbbb-0004-0000-0000-000000000000', '1 kilo',      'per kg',      '02', 1000),
+  ('cccccccc-0005-0000-0000-000000000001', 'bbbbbbbb-0005-0000-0000-000000000000', 'piraso',      'per piece',   '01',   60),
+  ('cccccccc-0005-0000-0000-000000000002', 'bbbbbbbb-0005-0000-0000-000000000000', 'dosena',      'dozen',       '02',  720),
+  ('cccccccc-0005-0000-0000-000000000003', 'bbbbbbbb-0005-0000-0000-000000000000', 'tray (30)',   'tray of 30',  '03', 1800),
+  ('cccccccc-0006-0000-0000-000000000001', 'bbbbbbbb-0006-0000-0000-000000000000', '1/2 kilo',    'half kg',     '01',  500),
+  ('cccccccc-0006-0000-0000-000000000002', 'bbbbbbbb-0006-0000-0000-000000000000', '1 kilo',      'per kg',      '02', 1000),
+  ('cccccccc-0007-0000-0000-000000000001', 'bbbbbbbb-0007-0000-0000-000000000000', '500 ml',      '500 ml',      '01',  500),
+  ('cccccccc-0007-0000-0000-000000000002', 'bbbbbbbb-0007-0000-0000-000000000000', '1 litro',     '1 liter',     '02', 1000),
+  ('cccccccc-0008-0000-0000-000000000001', 'bbbbbbbb-0008-0000-0000-000000000000', 'bote 385 ml', '385 ml',      '01',  500),
+  ('cccccccc-0008-0000-0000-000000000002', 'bbbbbbbb-0008-0000-0000-000000000000', '1 litro',     '1 liter',     '02', 1100),
+  ('cccccccc-0009-0000-0000-000000000001', 'bbbbbbbb-0009-0000-0000-000000000000', 'bote 385 ml', '385 ml',      '01',  500),
+  ('cccccccc-0009-0000-0000-000000000002', 'bbbbbbbb-0009-0000-0000-000000000000', '1 litro',     '1 liter',     '02', 1100),
+  ('cccccccc-0010-0000-0000-000000000001', 'bbbbbbbb-0010-0000-0000-000000000000', '1/2 kilo',    'half kg',     '01',  500),
+  ('cccccccc-0010-0000-0000-000000000002', 'bbbbbbbb-0010-0000-0000-000000000000', '1 kilo',      'per kg',      '02', 1000)
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Today's prices (centavos), valid 24h from now ────────────────────────────
@@ -86,6 +86,7 @@ FROM (VALUES
 ) AS v(unit_id, price);
 
 -- ── A store for every auth user without one (₱2,000 suki limit) ─────────────
+-- Staff users are skipped: an auth user is either an owner or staff, never both.
 INSERT INTO stores (owner_user_id, name, owner_name, phone_e164, address_line, route_id, suki_limit_centavos)
 SELECT
   u.id,
@@ -97,6 +98,16 @@ SELECT
   200000
 FROM auth.users u
 WHERE u.phone IS NOT NULL
+  AND u.id NOT IN (SELECT user_id FROM staff)
 ON CONFLICT (owner_user_id) DO NOTHING;
+
+-- ── Dev: promote an auth user to buyer staff ─────────────────────────────────
+-- Sign in once with the phone you want to use, replace the number below, and
+-- uncomment. Delete any store row the seed may have created for that user first.
+-- INSERT INTO staff (user_id, name, phone_e164, role)
+-- SELECT u.id, 'Ka Edna (buyer)', '+' || u.phone, 'buyer'
+-- FROM auth.users u
+-- WHERE u.phone = '639171234567'
+-- ON CONFLICT (user_id) DO NOTHING;
 
 COMMIT;

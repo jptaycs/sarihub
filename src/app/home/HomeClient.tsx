@@ -71,7 +71,7 @@ export function HomeClient() {
     >();
     for (const p of products) {
       for (const u of p.units) {
-        if (u.priceCentavos !== null) {
+        if (u.priceCentavos !== null && !u.outOfStock) {
           map.set(u.id, { product: p, labelTl: u.labelTl, priceCentavos: u.priceCentavos });
         }
       }
@@ -238,6 +238,16 @@ function ProductRow(props: {
       <div className="mt-2 flex flex-wrap gap-2">
         {product.units.map((u) => {
           const qty = quantities[u.id] ?? 0;
+          if (u.outOfStock) {
+            return (
+              <span
+                key={u.id}
+                className="inline-flex h-tap items-center rounded-md border border-hair bg-surface-2 px-3 text-[13px] text-ink-3"
+              >
+                {u.labelTl} · ubos ngayon
+              </span>
+            );
+          }
           if (u.priceCentavos === null) {
             return (
               <span

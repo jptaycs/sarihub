@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatManila } from "./datetime";
-import { nextDeliveryDate } from "./deliverySchedule";
+import { cutoffInstant, nextDeliveryDate } from "./deliverySchedule";
 
 const EVERY_DAY = 127;
 const WEEKDAYS_ONLY = 2 + 4 + 8 + 16 + 32; // Mon–Fri
@@ -49,5 +49,25 @@ describe("nextDeliveryDate", () => {
   it("throws when a route has no active weekdays", () => {
     const at = manila("2026-07-06T21:00:00");
     expect(() => nextDeliveryDate({ cutoffLocal: "04:30:00", activeWeekdays: 0 }, at)).toThrow();
+  });
+});
+
+describe("cutoffInstant", () => {
+  it("is the cutoff wall-clock on the delivery day, in Manila", () => {
+    const deliverOn = manila("2026-07-07T00:00:00");
+    const out = cutoffInstant("04:30:00", deliverOn);
+    expect(formatManila(out, "yyyy-MM-dd HH:mm")).toBe("2026-07-07 04:30");
+  });
+
+  it("an evening order is still before its next-day cutoff", () => {
+    const at = manila("2026-07-06T21:00:00");
+    const deliverOn = nextDeliveryDate({ cutoffLocal: "04:30:00", activeWeekdays: EVERY_DAY }, at);
+    expect(at < cutoffInstant("04:30:00", deliverOn)).toBe(true);
+  });
+
+  it("accepts HH:MM without seconds", () => {
+    const deliverOn = manila("2026-07-07T00:00:00");
+    const out = cutoffInstant("04:30", deliverOn);
+    expect(formatManila(out, "HH:mm")).toBe("04:30");
   });
 });

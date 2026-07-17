@@ -5,3 +5,4 @@ export * from "./catalog";
 export * from "./orders";
 export * from "./suki";
 export * from "./inventory";
+export * from "./staff";

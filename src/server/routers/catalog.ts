@@ -2,8 +2,10 @@ import "server-only";
 
 import { and, asc, desc, eq, gt, inArray, lte } from "drizzle-orm";
 
-import { now } from "~/lib/datetime";
-import { dailyPrices, productUnits, products } from "~/server/db/schema";
+import { formatManila, now } from "~/lib/datetime";
+import { nextDeliveryDate } from "~/lib/deliverySchedule";
+import { dailyPrices, productUnits, products, routes, stores } from "~/server/db/schema";
+import { stockoutsForDay } from "~/server/services/stockouts";
 import { protectedProcedure, router } from "~/server/trpc/init";
 
 export const catalogRouter = router({
@@ -14,6 +16,20 @@ export const catalogRouter = router({
    */
   today: protectedProcedure.query(async ({ ctx }) => {
     const at = now();
+
+    // Stockouts apply per delivery day, so resolve the day this caller's next
+    // order would ride. No store/route yet → fall back to today's Manila date.
+    const [store] = await ctx.db
+      .select({
+        cutoffLocal: routes.cutoffLocal,
+        activeWeekdays: routes.activeWeekdays,
+      })
+      .from(stores)
+      .innerJoin(routes, eq(routes.id, stores.routeId))
+      .where(eq(stores.ownerUserId, ctx.user.id))
+      .limit(1);
+    const deliveryDayStr = formatManila(store ? nextDeliveryDate(store, at) : at, "yyyy-MM-dd");
+    const stockouts = await stockoutsForDay(ctx.db, deliveryDayStr);
 
     const rows = await ctx.db
       .select({
@@ -56,6 +72,8 @@ export const catalogRouter = router({
       labelTl: string;
       labelEn: string;
       priceCentavos: bigint | null;
+      /** Buyer couldn't source it for this caller's delivery day. Not orderable. */
+      outOfStock: boolean;
     };
     type ProductOut = {
       id: string;
@@ -87,6 +105,7 @@ export const catalogRouter = router({
         labelTl: r.unitLabelTl,
         labelEn: r.unitLabelEn,
         priceCentavos: priceByUnit.get(r.unitId) ?? null,
+        outOfStock: stockouts.has(r.unitId),
       });
     }
 

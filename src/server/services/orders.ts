@@ -12,9 +12,10 @@ import {
   routes,
   stores,
   sukiLedger,
+  unitStockouts,
 } from "~/server/db/schema";
-import { now } from "~/lib/datetime";
-import { nextDeliveryDate } from "~/lib/deliverySchedule";
+import { formatManila, now } from "~/lib/datetime";
+import { cutoffInstant, nextDeliveryDate } from "~/lib/deliverySchedule";
 import type { PlaceOrderInput } from "~/lib/schemas/order";
 
 type Db = typeof defaultDb;
@@ -37,7 +38,13 @@ export type PlaceOrderResult =
   | { ok: true; order: PlacedOrderSummary; alreadyPlaced: boolean }
   | {
       ok: false;
-      reason: "no_store" | "no_route" | "unknown_item" | "no_price_today" | "over_suki_limit";
+      reason:
+        | "no_store"
+        | "no_route"
+        | "unknown_item"
+        | "no_price_today"
+        | "out_of_stock"
+        | "over_suki_limit";
       message: string;
       /** For over_suki_limit: how much tab room is left, so the UI can say it. */
       availableCentavos?: bigint;
@@ -150,6 +157,29 @@ export async function placeOrder(
   const totalCentavos = lines.reduce((sum, l) => sum + l.lockedTotalCentavos, 0n);
   const deliverOn = nextDeliveryDate(route, submittedAt);
 
+  // A unit the buyer couldn't source can't ride the truck this order targets.
+  const stockoutRows = await db
+    .select({ productUnitId: unitStockouts.productUnitId })
+    .from(unitStockouts)
+    .where(
+      and(
+        inArray(unitStockouts.productUnitId, unitIds),
+        eq(unitStockouts.stockoutOn, formatManila(deliverOn, "yyyy-MM-dd")),
+      ),
+    );
+  if (stockoutRows.length > 0) {
+    const stockedOut = new Set(stockoutRows.map((r) => r.productUnitId));
+    const names = unitRows
+      .filter((u) => stockedOut.has(u.unitId))
+      .map((u) => `${u.nameTl} (${u.unitLabelTl})`)
+      .join(", ");
+    return {
+      ok: false,
+      reason: "out_of_stock",
+      message: `Naubos po ngayon: ${names}. Alisin muna po sa order.`,
+    };
+  }
+
   return db.transaction(async (tx) => {
     // Retried submit with the same key returns the original order untouched.
     const [existing] = await tx
@@ -238,5 +268,104 @@ export async function placeOrder(
         })),
       },
     };
+  });
+}
+
+export type CancelOrderResult =
+  | { ok: true; orderId: string; reversedCentavos: bigint }
+  | {
+      ok: false;
+      reason: "not_found" | "not_cancellable" | "past_cutoff";
+      message: string;
+    };
+
+/**
+ * Cancel an order the owner just placed. Only allowed while the order is still
+ * `submitted` and strictly before the route cutoff on its delivery day — after
+ * that the goods are being bought at the palengke. The suki charge is reversed
+ * with an adjustment ledger row (never by deleting the charge) in the same
+ * transaction; the DB trigger refreshes the store balance.
+ */
+export async function cancelOrder(
+  db: Db,
+  userId: string,
+  orderId: string,
+): Promise<CancelOrderResult> {
+  const at = now();
+
+  const [store] = await db
+    .select({ id: stores.id })
+    .from(stores)
+    .where(eq(stores.ownerUserId, userId))
+    .limit(1);
+  if (!store) {
+    return { ok: false, reason: "not_found", message: "Hindi po mahanap ang order." };
+  }
+
+  return db.transaction(async (tx) => {
+    // Lock the order row so a concurrent pack/cancel can't race this check.
+    const rows = await tx.execute<{
+      status: string;
+      total_centavos: string;
+      deliver_on: Date;
+      cutoff_local: string;
+    }>(
+      sql`SELECT o.status, o.total_centavos, o.deliver_on, r.cutoff_local
+          FROM orders o
+          JOIN routes r ON r.id = o.route_id
+          WHERE o.id = ${orderId} AND o.store_id = ${store.id}
+          FOR UPDATE OF o`,
+    );
+    const order = rows[0];
+    if (!order) {
+      return {
+        ok: false as const,
+        reason: "not_found" as const,
+        message: "Hindi po mahanap ang order.",
+      };
+    }
+    if (order.status === "cancelled") {
+      return {
+        ok: false as const,
+        reason: "not_cancellable" as const,
+        message: "Kanselado na po ang order na ito.",
+      };
+    }
+    if (order.status !== "submitted") {
+      return {
+        ok: false as const,
+        reason: "not_cancellable" as const,
+        message: "Hindi na po pwedeng kanselahin — inihahanda na ang order.",
+      };
+    }
+    if (at >= cutoffInstant(order.cutoff_local, order.deliver_on)) {
+      return {
+        ok: false as const,
+        reason: "past_cutoff" as const,
+        message: "Lampas na po sa cutoff — binibili na ang paninda para sa ruta.",
+      };
+    }
+
+    const totalCentavos = BigInt(order.total_centavos);
+
+    await tx
+      .update(orders)
+      .set({
+        status: "cancelled",
+        cancelledAt: at,
+        cancelledReason: "Kinansela ng tindahan bago ang cutoff",
+      })
+      .where(eq(orders.id, orderId));
+
+    // Reverse the tab charge. The ledger stays append-only.
+    await tx.insert(sukiLedger).values({
+      storeId: store.id,
+      kind: "adjustment",
+      amountCentavos: -totalCentavos,
+      orderId,
+      reason: "Kanseladong order",
+    });
+
+    return { ok: true as const, orderId, reversedCentavos: totalCentavos };
   });
 }

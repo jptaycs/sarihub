@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   index,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -45,6 +47,8 @@ export const productUnits = pgTable(
     labelEn: varchar("label_en", { length: 48 }).notNull(),
     /** Sort key within a product. */
     sortOrder: varchar("sort_order", { length: 8 }).notNull().default("00"),
+    /** Approximate weight of one unit in grams — feeds the truck load check. */
+    weightGrams: integer("weight_grams"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestampColumns,
   },
@@ -79,6 +83,30 @@ export const dailyPrices = pgTable(
 
 export type DailyPrice = typeof dailyPrices.$inferSelect;
 export type NewDailyPrice = typeof dailyPrices.$inferInsert;
+
+/**
+ * A unit the buyer couldn't source at the palengke for one delivery day.
+ * Keyed by Manila calendar date ("yyyy-MM-dd"). Marking one cancels the item
+ * on that day's submitted orders and recomputes their totals — so there is no
+ * unmark: a mis-tap is fixed by re-ordering, not by resurrecting bills.
+ */
+export const unitStockouts = pgTable(
+  "unit_stockouts",
+  {
+    id: idColumn(),
+    productUnitId: uuid("product_unit_id")
+      .notNull()
+      .references(() => productUnits.id, { onDelete: "cascade" }),
+    /** Manila delivery day this stockout applies to. */
+    stockoutOn: date("stockout_on").notNull(),
+    /** Auth user of the buyer who marked it. */
+    markedBy: uuid("marked_by"),
+    ...timestampColumns,
+  },
+  (t) => [uniqueIndex("unit_stockouts_unit_day_uq").on(t.productUnitId, t.stockoutOn)],
+);
+
+export type UnitStockout = typeof unitStockouts.$inferSelect;
 
 /** Helper: select the live price for a product_unit at `at`. */
 export const livePriceSql = (productUnitId: string, at: Date) => sql`

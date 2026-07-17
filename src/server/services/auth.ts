@@ -1,7 +1,31 @@
 import "server-only";
 
+import { and, eq } from "drizzle-orm";
+
 import { createSupabaseServer } from "~/lib/supabase/server";
 import { parsePhPhone } from "~/lib/format";
+import { db } from "~/server/db";
+import { staff, type Staff } from "~/server/db/schema";
+
+/**
+ * The active staff row for the signed-in user, or null for owners and guests.
+ * Server Components use this to keep buyer/admin/driver screens off owner
+ * accounts; tRPC has its own staffProcedure doing the same check.
+ */
+export async function activeStaffForRequest(): Promise<Staff | null> {
+  const supabase = await createSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [row] = await db
+    .select()
+    .from(staff)
+    .where(and(eq(staff.userId, user.id), eq(staff.isActive, true)))
+    .limit(1);
+  return row ?? null;
+}
 
 export type StartOtpResult =
   | { ok: true; phoneE164: string }

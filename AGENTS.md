@@ -77,21 +77,21 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] Dev seed (`drizzle/seed.sql`): Lucena route, 10 products with multi-unit SKUs, today's prices, auto-store per auth user
 
 ### Now: make it real
-- [ ] Wire up a live Supabase project: `.env` from `.env.example`, apply migration 0000 + RLS SQL, run seed, verify login → browse → order end-to-end on a phone
-- [ ] Order detail page for owners (`/orders/[id]`): line items with locked prices, status timeline, cancelled-item display
-- [ ] Owner order cancellation (only while `submitted`, before route cutoff)
+- [ ] Wire up a live Supabase project: `.env` from `.env.example`, apply all migrations in `drizzle/` (+ the `_rls.sql` companions), run seed, verify login → browse → order end-to-end on a phone
+- [x] Order detail page for owners (`/orders/[id]`): line items with locked prices, status timeline, cancelled-item display
+- [x] Owner order cancellation (only while `submitted`, before route cutoff; charge reversed with a ledger adjustment)
 
 ### Next: buyer flow (5 AM palengke)
-- [ ] Buyer role + route guard (staff table or role claim; owners must not see buyer screens)
-- [ ] Daily price entry screen: today's list, big tap targets, "carry over from yesterday" bulk action, per-unit price edit writes a new `daily_prices` row (never UPDATE)
-- [ ] Mark unit out-of-stock for today (drives `cancelled_item` on affected submitted orders + recompute totals)
+- [x] Buyer role + route guard (`staff` table, migration 0001; `staffProcedure`/`buyerProcedure` in tRPC, `/buyer` layout redirects owners)
+- [x] Daily price entry screen (`/buyer/prices`): today's list, big tap targets, "carry over from yesterday" bulk action, per-unit price edit writes a new `daily_prices` row (never UPDATE)
+- [x] Mark unit out-of-stock for today (`unit_stockouts` per Manila day; drives `cancelled_item` on affected submitted orders + recompute totals + ledger adjustment; catalog + `orders.place` refuse the unit for that delivery day)
 
 ### Then: admin
-- [ ] Admin role + `/admin` layout (tablet/laptop)
-- [ ] Catalog management: products + units CRUD, activate/deactivate
-- [ ] Orders kanban: submitted → packed → in_transit → delivered, per route, with route load total vs `capacity_kg`
-- [ ] Suki exposure view: balances vs limits, record payments (ledger `payment` rows), adjustment entries with reason
-- [ ] Store management: create store, assign route, set suki limit
+- [x] Admin role + `/admin` layout (tablet/laptop; `adminProcedure`, nav: Padala/Katalogo/Suki/Tindahan/Presyo)
+- [x] Catalog management (`/admin/catalog`): products + units CRUD incl. activate/deactivate; `weight_grams` per unit (migration 0002) feeds the load check
+- [x] Orders kanban (`/admin/orders`): submitted → packed → in_transit → delivered (forward-only, stamps lifecycle timestamps), route filter, per-route load kg vs `capacity_kg` with over-capacity warning
+- [x] Suki exposure view (`/admin/suki`): balances vs limits sorted by exposure, record payments (negative `payment` ledger rows), signed adjustments with required reason, per-store ledger trail
+- [x] Store management (`/admin/stores`): create store (binds an existing phone-OTP auth user by number), assign route, set suki limit
 
 ### Then: driver
 - [ ] Driver role + today's ordered stop list per route

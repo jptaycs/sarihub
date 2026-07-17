@@ -14,6 +14,18 @@ export function formatPeso(centavos: bigint | number): string {
 }
 
 /**
+ * Parse a user-typed peso amount ("160", "160.50", "₱1,250.5") to integer
+ * centavos. Returns null for anything that isn't a plain non-negative amount
+ * with at most two decimals — no guessing on malformed input, it's money.
+ */
+export function pesosToCentavos(raw: string): number | null {
+  const cleaned = raw.replace(/[₱,\s]/g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const [whole = "0", frac = ""] = cleaned.split(".");
+  return Number(whole) * 100 + Number(`${frac}00`.slice(0, 2));
+}
+
+/**
  * Convert E.164 "+639171234567" to the local-display "0917 123 4567".
  * Falls back to the input unchanged if it isn't a PH mobile in E.164.
  */

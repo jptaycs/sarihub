@@ -8,6 +8,20 @@
       "when": 1779637692764,
       "tag": "0000_heavy_thunderball",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784235948608,
+      "tag": "0001_goofy_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784266306975,
+      "tag": "0002_stormy_weapon_omega",
+      "breakpoints": true
     }
   ]
 }

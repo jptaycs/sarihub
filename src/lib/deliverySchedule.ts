@@ -19,6 +19,18 @@ export interface DeliverySchedule {
  * active weekday. A 9 PM order against a 4:30 AM cutoff lands on tomorrow's
  * 6 AM route — that's the normal case.
  */
+/**
+ * The UTC instant of the route cutoff on an order's delivery day. `deliverOn`
+ * is the Manila-midnight instant stored on the order. An order can still be
+ * cancelled strictly before this instant — after it, the truck is loading.
+ */
+export function cutoffInstant(cutoffLocal: string, deliverOn: Date): Date {
+  const [hh = 0, mm = 0] = cutoffLocal.split(":").map(Number);
+  const day = toZonedTime(deliverOn, MANILA_TZ);
+  day.setHours(hh, mm, 0, 0);
+  return fromZonedTime(day, MANILA_TZ);
+}
+
 export function nextDeliveryDate(schedule: DeliverySchedule, nowUtc: Date): Date {
   const [hh = 0, mm = 0] = schedule.cutoffLocal.split(":").map(Number);
   const cutoffMinutes = hh * 60 + mm;
