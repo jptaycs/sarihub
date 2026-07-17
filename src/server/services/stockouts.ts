@@ -72,7 +72,7 @@ export async function markUnitOutOfStock(
           WHERE oi.product_unit_id = ${productUnitId}
             AND oi.cancelled_item = false
             AND o.status = 'submitted'
-            AND o.deliver_on = ${dayStart}
+            AND o.deliver_on = ${dayStart.toISOString()}
           FOR UPDATE OF oi, o`,
     );
     if (affected.length === 0) {

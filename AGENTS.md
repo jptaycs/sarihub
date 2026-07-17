@@ -77,7 +77,8 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] Dev seed (`drizzle/seed.sql`): Lucena route, 10 products with multi-unit SKUs, today's prices, auto-store per auth user
 
 ### Now: make it real
-- [ ] Wire up a live Supabase project: `.env` from `.env.example`, apply all migrations in `drizzle/` (+ the `_rls.sql` companions), run seed, verify login → browse → order end-to-end on a phone
+- [x] Wire up a live Supabase project ("Sarihub", ap-southeast-1): all migrations + RLS/storage SQL applied, seeded, phone OTP enabled (test-OTP numbers only — no SMS provider configured yet, see below). Verified live end-to-end for all four roles: owner order+cancel with price lock and suki ledger reversal, buyer price board with real price expiry/carry-over/out-of-stock, admin kanban with forward-only guard and route load, driver stop list with POD + idempotent delivery, plus role-guard and unauthenticated-request enforcement
+- [ ] Configure a real SMS provider (Twilio/Vonage/MessageBird) on the Supabase project so real phone numbers can sign in — currently only two hardcoded test numbers work
 - [x] Order detail page for owners (`/orders/[id]`): line items with locked prices, status timeline, cancelled-item display
 - [x] Owner order cancellation (only while `submitted`, before route cutoff; charge reversed with a ledger adjustment)
 

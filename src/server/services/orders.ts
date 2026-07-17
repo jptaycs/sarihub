@@ -304,10 +304,13 @@ export async function cancelOrder(
 
   return db.transaction(async (tx) => {
     // Lock the order row so a concurrent pack/cancel can't race this check.
+    // deliver_on comes back as raw text, not a Date: drizzle disables postgres-js's
+    // timestamptz parser on the shared client for its own column-mapping logic, which
+    // doesn't apply to this raw query. Parse it explicitly.
     const rows = await tx.execute<{
       status: string;
       total_centavos: string;
-      deliver_on: Date;
+      deliver_on: string;
       cutoff_local: string;
     }>(
       sql`SELECT o.status, o.total_centavos, o.deliver_on, r.cutoff_local
@@ -316,7 +319,7 @@ export async function cancelOrder(
           WHERE o.id = ${orderId} AND o.store_id = ${store.id}
           FOR UPDATE OF o`,
     );
-    const order = rows[0];
+    const order = rows[0] && { ...rows[0], deliver_on: new Date(rows[0].deliver_on) };
     if (!order) {
       return {
         ok: false as const,

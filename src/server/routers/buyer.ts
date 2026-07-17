@@ -45,17 +45,20 @@ export const buyerRouter = router({
 
     // Two most recent price rows per unit: the live one (if still valid) and
     // the one before it — enough to show today's price and yesterday's.
+    // valid_until comes back as raw text, not a Date: drizzle disables postgres-js's
+    // timestamptz parser on the shared client for its own column-mapping logic, which
+    // doesn't apply to this raw query. Parse it explicitly.
     const history = await ctx.db.execute<{
       product_unit_id: string;
       price_centavos: string;
-      valid_until: Date;
+      valid_until: string;
     }>(
       sql`SELECT product_unit_id, price_centavos, valid_until
           FROM (
             SELECT product_unit_id, price_centavos, valid_until,
                    row_number() OVER (PARTITION BY product_unit_id ORDER BY captured_at DESC) AS rn
             FROM daily_prices
-            WHERE captured_at <= ${at}
+            WHERE captured_at <= ${at.toISOString()}
           ) ranked
           WHERE rn <= 2
           ORDER BY product_unit_id, rn`,
@@ -65,7 +68,7 @@ export const buyerRouter = router({
     const previousByUnit = new Map<string, bigint>();
     for (const row of history) {
       const price = BigInt(row.price_centavos);
-      const live = row.valid_until > at;
+      const live = new Date(row.valid_until) > at;
       if (live && !todayByUnit.has(row.product_unit_id)) {
         todayByUnit.set(row.product_unit_id, price);
       } else if (!previousByUnit.has(row.product_unit_id)) {
@@ -153,20 +156,22 @@ export const buyerRouter = router({
   carryOverYesterday: buyerProcedure.mutation(async ({ ctx }) => {
     const at = now();
     const validUntil = addHours(at, PRICE_VALIDITY_HOURS);
+    const atIso = at.toISOString();
+    const validUntilIso = validUntil.toISOString();
 
     const inserted = await ctx.db.execute<{ id: string }>(
       sql`INSERT INTO daily_prices (product_unit_id, price_centavos, captured_at, valid_until, source_market, captured_by)
           SELECT DISTINCT ON (dp.product_unit_id)
-                 dp.product_unit_id, dp.price_centavos, ${at}, ${validUntil}, dp.source_market, ${ctx.staff.userId}
+                 dp.product_unit_id, dp.price_centavos, ${atIso}, ${validUntilIso}, dp.source_market, ${ctx.staff.userId}
           FROM daily_prices dp
           JOIN product_units pu ON pu.id = dp.product_unit_id AND pu.is_active
           JOIN products p ON p.id = pu.product_id AND p.is_active
-          WHERE dp.captured_at <= ${at}
+          WHERE dp.captured_at <= ${atIso}
             AND NOT EXISTS (
               SELECT 1 FROM daily_prices live
               WHERE live.product_unit_id = dp.product_unit_id
-                AND live.captured_at <= ${at}
-                AND live.valid_until > ${at}
+                AND live.captured_at <= ${atIso}
+                AND live.valid_until > ${atIso}
             )
           ORDER BY dp.product_unit_id, dp.captured_at DESC
           RETURNING id`,

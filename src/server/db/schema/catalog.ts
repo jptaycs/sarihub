@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -107,13 +106,3 @@ export const unitStockouts = pgTable(
 );
 
 export type UnitStockout = typeof unitStockouts.$inferSelect;
-
-/** Helper: select the live price for a product_unit at `at`. */
-export const livePriceSql = (productUnitId: string, at: Date) => sql`
-  SELECT price_centavos FROM daily_prices
-  WHERE product_unit_id = ${productUnitId}
-    AND captured_at <= ${at}
-    AND valid_until > ${at}
-  ORDER BY captured_at DESC
-  LIMIT 1
-`;
