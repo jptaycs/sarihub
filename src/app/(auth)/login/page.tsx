@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Logo } from "~/components/ui/Logo";
 
+import { DevLoginButtons } from "./DevLoginButtons";
 import { PhoneEntryForm } from "./PhoneEntryForm";
 
 export default function LoginPage() {
@@ -32,6 +33,8 @@ export default function LoginPage() {
       </p>
 
       <PhoneEntryForm />
+
+      {process.env.NODE_ENV !== "production" && <DevLoginButtons />}
 
       <p className="mx-auto mt-8 text-center text-[13px] leading-[1.5] text-ink-2">
         May problema po? Tawagan: <span className="font-medium text-ink">0917-555-0188</span>
