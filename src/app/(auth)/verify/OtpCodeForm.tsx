@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { cn } from "~/lib/cn";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
@@ -46,17 +47,25 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
 
   function handleChange(i: number, raw: string) {
     const v = raw.replace(/\D/g, "").slice(0, 1);
+    if (v && i === CODE_LEN - 1) {
+      // requestSubmit() reads the hidden input's DOM value synchronously, but
+      // setState is batched — without flushSync the native form submits
+      // whatever `code` was on the *previous* render, missing this digit.
+      let complete = false;
+      flushSync(() => {
+        setDigits((prev) => {
+          const next = [...prev];
+          next[i] = v;
+          complete = next.every((d) => d.length === 1);
+          return next;
+        });
+      });
+      if (complete) requestSubmit();
+      return;
+    }
     setDigit(i, v);
     if (v && i < CODE_LEN - 1) {
       inputsRef.current[i + 1]?.focus();
-    }
-    if (v && i === CODE_LEN - 1) {
-      // Auto-submit once the final digit is filled.
-      const filled = [...digits];
-      filled[i] = v;
-      if (filled.every((d) => d.length === 1)) {
-        requestSubmit();
-      }
     }
   }
 
@@ -79,7 +88,9 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
     if (!pasted) return;
     e.preventDefault();
     const next = Array.from({ length: CODE_LEN }, (_, i) => pasted[i] ?? "");
-    setDigits(next);
+    // Same flushSync requirement as handleChange — requestSubmit() below
+    // must see this update already committed to the hidden input.
+    flushSync(() => setDigits(next));
     const focusIdx = Math.min(pasted.length, CODE_LEN - 1);
     inputsRef.current[focusIdx]?.focus();
     if (pasted.length === CODE_LEN) requestSubmit();
@@ -90,47 +101,57 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
   }
 
   return (
-    <form ref={formRef} action={verifyAction} className="mt-9">
-      <input type="hidden" name="phone" value={phoneE164} />
-      <input type="hidden" name="code" value={code} />
+    <>
+      {/* A <form> can't contain a nested <form> (invalid HTML — browsers
+          silently "fix" the nesting on parse, which breaks React hydration).
+          The resend form below is a sibling, not a descendant, of this one. */}
+      <form ref={formRef} action={verifyAction} className="mt-9">
+        <input type="hidden" name="phone" value={phoneE164} />
+        <input type="hidden" name="code" value={code} />
 
-      <div
-        className="flex justify-between gap-[10px]"
-        role="group"
-        aria-label={dict.verify.codeGroupLabel}
-      >
-        {digits.map((d, i) => {
-          const isFocus = d === "" && digits.slice(0, i).every((x) => x !== "");
-          return (
-            <input
-              key={i}
-              ref={(el) => {
-                inputsRef.current[i] = el;
-              }}
-              value={d}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={handlePaste}
-              inputMode="numeric"
-              autoComplete={i === 0 ? "one-time-code" : "off"}
-              maxLength={1}
-              aria-label={interpolate(dict.verify.digitLabel, { n: i + 1 })}
-              className={cn(
-                "tnum h-16 flex-1 rounded-md border bg-white text-center text-[28px] font-medium text-ink outline-none transition-shadow",
-                isFocus
-                  ? "border-action shadow-[0_0_0_3px_rgba(216,90,48,0.15)]"
-                  : "border-hair-strong",
-              )}
-            />
-          );
-        })}
-      </div>
+        <div
+          className="flex justify-between gap-[10px]"
+          role="group"
+          aria-label={dict.verify.codeGroupLabel}
+        >
+          {digits.map((d, i) => {
+            const isFocus = d === "" && digits.slice(0, i).every((x) => x !== "");
+            return (
+              <input
+                key={i}
+                ref={(el) => {
+                  inputsRef.current[i] = el;
+                }}
+                value={d}
+                onChange={(e) => handleChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                onPaste={handlePaste}
+                inputMode="numeric"
+                autoComplete={i === 0 ? "one-time-code" : "off"}
+                maxLength={1}
+                aria-label={interpolate(dict.verify.digitLabel, { n: i + 1 })}
+                className={cn(
+                  "tnum h-16 flex-1 rounded-md border bg-white text-center text-[28px] font-medium text-ink outline-none transition-shadow",
+                  isFocus
+                    ? "border-action shadow-[0_0_0_3px_rgba(216,90,48,0.15)]"
+                    : "border-hair-strong",
+                )}
+              />
+            );
+          })}
+        </div>
 
-      {verifyState?.error ? (
-        <p role="alert" className="mt-4 text-sm text-danger">
-          {verifyState.error}
-        </p>
-      ) : null}
+        {verifyState?.error ? (
+          <p role="alert" className="mt-4 text-sm text-danger">
+            {verifyState.error}
+          </p>
+        ) : null}
+
+        {/* Visually hidden submit so Enter key works even with manual digit input. */}
+        <button type="submit" className="sr-only" tabIndex={-1} disabled={verifying}>
+          Verify
+        </button>
+      </form>
 
       <div className="mt-6 flex items-center justify-between">
         <span className="text-[13px] text-ink-2">
@@ -154,11 +175,6 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
           </button>
         </form>
       </div>
-
-      {/* Visually hidden submit so Enter key works even with manual digit input. */}
-      <button type="submit" className="sr-only" tabIndex={-1} disabled={verifying}>
-        Verify
-      </button>
-    </form>
+    </>
   );
 }
