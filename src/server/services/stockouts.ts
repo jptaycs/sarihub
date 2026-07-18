@@ -3,6 +3,9 @@ import "server-only";
 import { eq, inArray, sql } from "drizzle-orm";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
+import { getDictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import { db as defaultDb } from "~/server/db";
 import {
   orderItems,
@@ -32,7 +35,9 @@ export async function markUnitOutOfStock(
   db: Db,
   buyerUserId: string,
   productUnitId: string,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<MarkOutOfStockResult> {
+  const dict = getDictionary(locale).buyerPrices.errors;
   const at = now();
   const dayStr = formatManila(at, "yyyy-MM-dd");
   // The orders affected are the ones riding today's truck.
@@ -45,7 +50,7 @@ export async function markUnitOutOfStock(
     .where(eq(productUnits.id, productUnitId))
     .limit(1);
   if (!unit) {
-    return { ok: false, reason: "unknown_unit", message: "Hindi po mahanap ang item na iyan." };
+    return { ok: false, reason: "unknown_unit", message: dict.unknownUnit };
   }
 
   return db.transaction(async (tx) => {
@@ -110,7 +115,7 @@ export async function markUnitOutOfStock(
         kind: "adjustment",
         amountCentavos: -deltaCentavos,
         orderId,
-        reason: `Naubos: ${unit.nameTl} (${unit.labelTl})`,
+        reason: interpolate(dict.oosLedgerReason, { name: unit.nameTl, unit: unit.labelTl }),
       });
     }
 

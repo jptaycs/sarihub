@@ -7,16 +7,22 @@ import { Button } from "~/components/ui/Button";
 import { cn } from "~/lib/cn";
 import { formatManila, formatManilaDate, formatManilaTime } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
+import type { Dictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 
-const TIMELINE_STEPS = [
-  { key: "submittedAt", label: "Naipasa" },
-  { key: "packedAt", label: "Nakahanda" },
-  { key: "inTransitAt", label: "Papunta na" },
-  { key: "deliveredAt", label: "Naihatid" },
-] as const;
+function timelineSteps(dict: Dictionary) {
+  return [
+    { key: "submittedAt", label: dict.orders.statusSubmitted },
+    { key: "packedAt", label: dict.orders.statusPacked },
+    { key: "inTransitAt", label: dict.orders.statusInTransit },
+    { key: "deliveredAt", label: dict.orders.statusDelivered },
+  ] as const;
+}
 
 export function OrderDetailClient(props: { orderId: string }) {
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const orderQuery = trpc.orders.get.useQuery(
     { orderId: props.orderId },
@@ -33,14 +39,14 @@ export function OrderDetailClient(props: { orderId: string }) {
   });
 
   if (orderQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load po…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (orderQuery.error || !orderQuery.data) {
     return (
       <div className="pt-10 text-center">
-        <p className="text-[13px] text-ink-2">Hindi po mahanap ang order na ito.</p>
+        <p className="text-[13px] text-ink-2">{dict.orderDetail.notFound}</p>
         <Link href="/orders" className="mt-2 inline-block text-[14px] font-medium text-action">
-          Balik sa mga order →
+          {dict.orderDetail.backLink}
         </Link>
       </div>
     );
@@ -50,32 +56,35 @@ export function OrderDetailClient(props: { orderId: string }) {
   const isCancelled = order.status === "cancelled";
   const activeItems = order.items.filter((i) => !i.cancelledItem);
   const cancelledItems = order.items.filter((i) => i.cancelledItem);
+  const steps = timelineSteps(dict);
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-[14px] font-medium">Dating: {formatManilaDate(order.deliverOn)}</span>
+        <span className="text-[14px] font-medium">
+          {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn) })}
+        </span>
         {isCancelled && (
           <span className="rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-danger">
-            Kanselado
+            {dict.orders.statusCancelled}
           </span>
         )}
       </div>
 
       {isCancelled ? (
         <div className="mt-3 rounded-md bg-surface-2 px-3.5 py-3 text-[13px]">
-          <div className="font-medium text-danger">Kanselado na po ang order na ito.</div>
+          <div className="font-medium text-danger">{dict.orderDetail.cancelledBanner}</div>
           {order.cancelledAt && (
             <div className="mt-0.5 text-ink-2">
               {formatManila(order.cancelledAt, "d MMM, h:mm a")}
               {order.cancelledReason ? ` · ${order.cancelledReason}` : ""}
             </div>
           )}
-          <div className="mt-1 text-ink-2">Ibinalik na sa suki tab ninyo ang halaga.</div>
+          <div className="mt-1 text-ink-2">{dict.orderDetail.refunded}</div>
         </div>
       ) : (
         <ol className="mt-3">
-          {TIMELINE_STEPS.map((step, i) => {
+          {steps.map((step, i) => {
             const at = order[step.key];
             const done = at != null;
             return (
@@ -89,7 +98,7 @@ export function OrderDetailClient(props: { orderId: string }) {
                   >
                     {done ? "✓" : "·"}
                   </span>
-                  {i < TIMELINE_STEPS.length - 1 && (
+                  {i < steps.length - 1 && (
                     <span className={cn("w-px flex-1", done ? "bg-success" : "bg-hair-strong")} />
                   )}
                 </div>
@@ -109,7 +118,7 @@ export function OrderDetailClient(props: { orderId: string }) {
         </ol>
       )}
 
-      <h2 className="hair-t mt-2 pt-4 text-[15px] font-medium">Mga item</h2>
+      <h2 className="hair-t mt-2 pt-4 text-[15px] font-medium">{dict.orderDetail.itemsHeading}</h2>
       <div className="mt-1">
         {activeItems.map((item) => (
           <div key={item.id} className="hair-b flex items-center justify-between py-2.5">
@@ -132,7 +141,7 @@ export function OrderDetailClient(props: { orderId: string }) {
               <div className="text-[14px] text-ink-3 line-through">
                 {item.nameTl} · {item.unitLabelTl} ×{item.quantity}
               </div>
-              <div className="text-xs text-warning">Naubos sa palengke — hindi po sinisingil.</div>
+              <div className="text-xs text-warning">{dict.orderDetail.cancelledItemNote}</div>
             </div>
             <span className="price text-[14px] text-ink-3 line-through">
               {formatPeso(item.lockedTotalCentavos)}
@@ -142,31 +151,30 @@ export function OrderDetailClient(props: { orderId: string }) {
       </div>
 
       <div className="flex items-center justify-between py-3">
-        <span className="text-[14px] text-ink-2">Kabuuan (sa suki tab)</span>
+        <span className="text-[14px] text-ink-2">{dict.common.sukiTotalLabel}</span>
         <span className="price text-lg font-semibold">{formatPeso(order.totalCentavos)}</span>
       </div>
 
-      <p className="text-xs text-ink-3">
-        Presyo noong pag-order ang nakalista — hindi na nagbago kahit gumalaw ang presyo sa
-        palengke.
-      </p>
+      <p className="text-xs text-ink-3">{dict.orderDetail.priceLockNote}</p>
 
       {order.cancellable && (
         <div className="hair-t mt-4 pt-4">
           {!confirmingCancel ? (
             <>
               <Button variant="danger" block onClick={() => setConfirmingCancel(true)}>
-                Kanselahin ang order
+                {dict.orderDetail.cancelButton}
               </Button>
               <p className="mt-2 text-center text-xs text-ink-3">
-                Pwede pa pong kanselahin hanggang {formatManilaTime(order.cancelUntil)} sa{" "}
-                {formatManila(order.cancelUntil, "d MMM")}.
+                {interpolate(dict.orderDetail.cancelUntil, {
+                  time: formatManilaTime(order.cancelUntil),
+                  date: formatManila(order.cancelUntil, "d MMM"),
+                })}
               </p>
             </>
           ) : (
             <>
               <p className="text-center text-[14px] font-medium">
-                Sigurado po ba kayong ikakansela ang order na ito?
+                {dict.orderDetail.confirmCancel}
               </p>
               <div className="mt-3 flex gap-2">
                 <Button
@@ -175,7 +183,7 @@ export function OrderDetailClient(props: { orderId: string }) {
                   disabled={cancel.isPending}
                   onClick={() => setConfirmingCancel(false)}
                 >
-                  Huwag na lang
+                  {dict.orderDetail.keepOrder}
                 </Button>
                 <Button
                   variant="danger"
@@ -183,7 +191,7 @@ export function OrderDetailClient(props: { orderId: string }) {
                   disabled={cancel.isPending}
                   onClick={() => cancel.mutate({ orderId: props.orderId })}
                 >
-                  {cancel.isPending ? "Kinakansela…" : "Oo, ikansela"}
+                  {cancel.isPending ? dict.orderDetail.cancelling : dict.orderDetail.yesCancel}
                 </Button>
               </div>
             </>

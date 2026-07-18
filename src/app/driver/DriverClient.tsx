@@ -7,6 +7,8 @@ import { Button } from "~/components/ui/Button";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso, formatPhone } from "~/lib/format";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import { uploadPod } from "~/lib/supabase/storage";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
@@ -18,17 +20,16 @@ type RoutesToday = RouterOutputs["driver"]["routesToday"];
 type Stop = RouterOutputs["driver"]["stops"][number];
 
 export function DriverClient() {
+  const dict = useDictionary();
   const routesQuery = trpc.driver.routesToday.useQuery();
   const [pickedRouteId, setPickedRouteId] = useState<string | null>(null);
 
   if (routesQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load po…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (routesQuery.error || !routesQuery.data) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh po ang app.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -39,7 +40,9 @@ export function DriverClient() {
   return (
     <div>
       <header className="py-3">
-        <h1 className="text-[22px] font-medium leading-[1.15] tracking-tight">Byahe ngayon</h1>
+        <h1 className="text-[22px] font-medium leading-[1.15] tracking-tight">
+          {dict.driver.title}
+        </h1>
         <p className="mt-0.5 text-[13px] text-ink-2">{formatManilaDate(day)}</p>
       </header>
 
@@ -66,13 +69,14 @@ export function DriverClient() {
       {routeId ? (
         <StopList routeId={routeId} routes={routes} />
       ) : (
-        <p className="pt-8 text-center text-[13px] text-ink-2">Pumili po ng ruta sa itaas.</p>
+        <p className="pt-8 text-center text-[13px] text-ink-2">{dict.driver.pickRoute}</p>
       )}
     </div>
   );
 }
 
 function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
+  const dict = useDictionary();
   const stopsQuery = trpc.driver.stops.useQuery(
     { routeId: props.routeId },
     { refetchInterval: 120_000 },
@@ -80,13 +84,11 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
   const route = props.routes.find((r) => r.id === props.routeId);
 
   if (stopsQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load po…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (stopsQuery.error || !stopsQuery.data) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh po ang app.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -94,11 +96,7 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
   const delivered = stops.filter((s) => s.status === "delivered" || s.status === "settled");
 
   if (stops.length === 0) {
-    return (
-      <p className="pt-8 text-center text-[13px] text-ink-2">
-        Walang ihahatid sa rutang ito ngayon.
-      </p>
-    );
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.driver.emptyStops}</p>;
   }
 
   return (
@@ -109,7 +107,7 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
           {route?.vehiclePlate ? ` · ${route.vehiclePlate}` : ""}
         </span>
         <span className="price font-medium">
-          {delivered.length}/{stops.length} naihatid
+          {interpolate(dict.driver.delivered, { delivered: delivered.length, total: stops.length })}
         </span>
       </div>
       {stops.map((stop, i) => (
@@ -121,6 +119,7 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
 
 function StopCard(props: { stop: Stop; index: number }) {
   const { stop, index } = props;
+  const dict = useDictionary();
   const [confirming, setConfirming] = useState(false);
   const done = stop.status === "delivered" || stop.status === "settled";
   const activeItems = stop.items.filter((i) => !i.cancelledItem);
@@ -165,7 +164,7 @@ function StopCard(props: { stop: Stop; index: number }) {
           className="mt-3"
           onClick={() => setConfirming(true)}
         >
-          Naihatid ✓
+          {dict.driver.deliveredButton}
         </Button>
       )}
 
@@ -176,6 +175,7 @@ function StopCard(props: { stop: Stop; index: number }) {
 
 function PodSheet(props: { stop: Stop; onClose: () => void }) {
   const { stop } = props;
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const markDelivered = trpc.driver.markDelivered.useMutation({
     onSuccess() {
@@ -216,20 +216,21 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         type="button"
-        aria-label="Isara"
+        aria-label={dict.common.closeAria}
         onClick={props.onClose}
         className="absolute inset-0 bg-black/40"
       />
       <div className="relative max-h-[85dvh] w-full max-w-[420px] overflow-y-auto rounded-t-lg bg-surface px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-4">
         <div className="mx-auto mb-3 h-1 w-10 rounded-pill bg-hair-strong" />
-        <h2 className="text-lg font-medium">Naihatid kay {stop.ownerName}</h2>
+        <h2 className="text-lg font-medium">
+          {interpolate(dict.driver.podHeadingFor, { name: stop.ownerName })}
+        </h2>
         <p className="mt-1 text-[13px] text-ink-2">
-          {formatPeso(stop.totalCentavos)} · sa suki tab. Kuhanan ng litrato at pa-pirmahan kung
-          kaya.
+          {interpolate(dict.driver.podSubtitle, { price: formatPeso(stop.totalCentavos) })}
         </p>
 
         <label className="mt-4 block">
-          <span className="mb-1 block text-[13px] text-ink-2">Litrato ng paninda (POD)</span>
+          <span className="mb-1 block text-[13px] text-ink-2">{dict.driver.podPhotoLabel}</span>
           <span
             className={cn(
               "flex h-tap w-full cursor-pointer items-center justify-center rounded-md border text-[14px] font-medium",
@@ -238,7 +239,7 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
                 : "border-hair-strong bg-white active:bg-surface-2",
             )}
           >
-            {photo ? "✓ May litrato na" : "📷 Kuhanan ng litrato"}
+            {photo ? dict.driver.hasPhoto : dict.driver.takePhoto}
           </span>
           <input
             type="file"
@@ -251,7 +252,7 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
 
         <div className="mt-3" ref={signatureBox}>
           <span className="mb-1 block text-[13px] text-ink-2">
-            Pirma ni {stop.ownerName} (para sa suki tab)
+            {interpolate(dict.driver.signatureLabel, { name: stop.ownerName })}
           </span>
           <SignaturePad onChange={setHasSignature} />
         </div>
@@ -263,10 +264,10 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
         )}
 
         <Button variant="success" size="lg" block className="mt-4" disabled={busy} onClick={submit}>
-          {busy ? "Sandali po…" : "Tapos — naihatid na"}
+          {busy ? dict.driver.submitting : dict.driver.doneButton}
         </Button>
         <Button variant="ghost" block className="mt-2" disabled={busy} onClick={props.onClose}>
-          Bumalik
+          {dict.driver.back}
         </Button>
       </div>
     </div>

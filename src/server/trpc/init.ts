@@ -8,13 +8,16 @@ import { ZodError } from "zod";
 import { db } from "~/server/db";
 import { staff } from "~/server/db/schema";
 import { createSupabaseServer } from "~/lib/supabase/server";
+import { getDictionary } from "~/lib/i18n/dictionaries";
+import { getServerLocale } from "~/lib/i18n/server";
 
 export async function createTRPCContext() {
   const supabase = await createSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return { db, supabase, user };
+  const locale = await getServerLocale();
+  return { db, supabase, user, locale };
 }
 
 export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
@@ -37,7 +40,7 @@ export const publicProcedure = t.procedure;
 
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Hindi naka-sign in." });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: getDictionary(ctx.locale).common.errors.notSignedIn });
   }
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
@@ -54,7 +57,7 @@ export const staffProcedure = protectedProcedure.use(async ({ ctx, next }) => {
     .where(and(eq(staff.userId, ctx.user.id), eq(staff.isActive, true)))
     .limit(1);
   if (!staffRow) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Para sa staff lamang po ito." });
+    throw new TRPCError({ code: "FORBIDDEN", message: getDictionary(ctx.locale).common.errors.staffOnly });
   }
   return next({ ctx: { ...ctx, staff: staffRow } });
 });
@@ -62,7 +65,7 @@ export const staffProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 /** Buyer screens: the palengke price board. Admins can also operate them. */
 export const buyerProcedure = staffProcedure.use(async ({ ctx, next }) => {
   if (ctx.staff.role !== "buyer" && ctx.staff.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Para sa buyer staff lamang po ito." });
+    throw new TRPCError({ code: "FORBIDDEN", message: getDictionary(ctx.locale).common.errors.buyerOnly });
   }
   return next();
 });
@@ -70,7 +73,7 @@ export const buyerProcedure = staffProcedure.use(async ({ ctx, next }) => {
 /** Admin screens: dispatch, catalog, suki exposure, stores. Admin role only. */
 export const adminProcedure = staffProcedure.use(async ({ ctx, next }) => {
   if (ctx.staff.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Para sa admin lamang po ito." });
+    throw new TRPCError({ code: "FORBIDDEN", message: getDictionary(ctx.locale).common.errors.adminOnly });
   }
   return next();
 });
@@ -78,7 +81,7 @@ export const adminProcedure = staffProcedure.use(async ({ ctx, next }) => {
 /** Driver screens: today's stops, delivery confirmation. Admins can cover a route. */
 export const driverProcedure = staffProcedure.use(async ({ ctx, next }) => {
   if (ctx.staff.role !== "driver" && ctx.staff.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Para sa driver lamang po ito." });
+    throw new TRPCError({ code: "FORBIDDEN", message: getDictionary(ctx.locale).common.errors.driverOnly });
   }
   return next();
 });

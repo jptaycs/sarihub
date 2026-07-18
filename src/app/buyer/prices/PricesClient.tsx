@@ -7,6 +7,8 @@ import { Button } from "~/components/ui/Button";
 import { cn } from "~/lib/cn";
 import { formatManila, now } from "~/lib/datetime";
 import { formatPeso, pesosToCentavos } from "~/lib/format";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -16,6 +18,7 @@ type BoardProduct = PriceBoard["products"][number];
 type BoardUnit = BoardProduct["units"][number];
 
 export function PricesClient() {
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const boardQuery = trpc.buyer.priceBoard.useQuery();
   const carryOver = trpc.buyer.carryOverYesterday.useMutation({
@@ -25,13 +28,11 @@ export function PricesClient() {
   });
 
   if (boardQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load po…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (boardQuery.error || !boardQuery.data) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh po ang app.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -43,14 +44,16 @@ export function PricesClient() {
   return (
     <div>
       <header className="py-3">
-        <h1 className="text-[22px] font-medium leading-[1.15] tracking-tight">Presyo ngayon</h1>
+        <h1 className="text-[22px] font-medium leading-[1.15] tracking-tight">
+          {dict.buyerPrices.title}
+        </h1>
         <p className="mt-0.5 text-[13px] text-ink-2">{formatManila(now(), "EEEE, d MMM yyyy")}</p>
       </header>
 
       {unpriced.length > 0 ? (
         <div className="mb-3 rounded-md bg-warning-soft px-3.5 py-3">
           <p className="text-[13px] font-medium text-warning">
-            {unpriced.length} unit pa ang walang presyo ngayon.
+            {interpolate(dict.buyerPrices.unpricedWarning, { count: unpriced.length })}
           </p>
           {carryable.length > 0 && (
             <Button
@@ -60,14 +63,14 @@ export function PricesClient() {
               onClick={() => carryOver.mutate()}
             >
               {carryOver.isPending
-                ? "Kinokopya…"
-                : `Kopyahin ang presyo kahapon (${carryable.length})`}
+                ? dict.buyerPrices.carryingOver
+                : interpolate(dict.buyerPrices.carryOverButton, { count: carryable.length })}
             </Button>
           )}
         </div>
       ) : (
         <div className="mb-3 rounded-md bg-success-soft px-3.5 py-3 text-[13px] font-medium text-success">
-          Kumpleto na po ang presyo ngayon. ✓
+          {dict.buyerPrices.allPriced}
         </div>
       )}
 
@@ -101,6 +104,7 @@ function ProductPriceGroup(props: { product: BoardProduct }) {
 
 function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
   const { nameTl, unit } = props;
+  const dict = useDictionary();
   const utils = trpc.useUtils();
 
   const [editing, setEditing] = useState(false);
@@ -127,7 +131,7 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
       <div className="flex min-h-14 items-center justify-between gap-3 py-1.5">
         <span className="text-[15px] text-ink-3 line-through">{unit.labelTl}</span>
         <span className="rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-danger">
-          Ubos ngayon
+          {dict.buyerPrices.outOfStockBadge}
         </span>
       </div>
     );
@@ -151,13 +155,16 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
                   : "0.00"
               }
               className="price w-full bg-transparent text-xl font-medium outline-none"
-              aria-label={`Presyo ng ${nameTl} ${unit.labelTl}`}
+              aria-label={interpolate(dict.buyerPrices.priceInputAria, {
+                name: nameTl,
+                unit: unit.labelTl,
+              })}
             />
           </div>
         </div>
         <div className="mt-2 flex gap-2">
           <Button variant="secondary" block disabled={setPrice.isPending} onClick={() => setEditing(false)}>
-            Huwag
+            {dict.buyerPrices.cancelEdit}
           </Button>
           <Button
             block
@@ -167,7 +174,7 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
               setPrice.mutate({ productUnitId: unit.id, priceCentavos: draftCentavos });
             }}
           >
-            {setPrice.isPending ? "Sine-save…" : "I-save"}
+            {setPrice.isPending ? dict.buyerPrices.saving : dict.buyerPrices.save}
           </Button>
         </div>
         {setPrice.error && (
@@ -181,7 +188,7 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
     return (
       <div className="py-1.5">
         <p className="text-[14px] font-medium">
-          Ubos na po ba talaga ang {nameTl} ({unit.labelTl})? Makakansela ito sa mga order ngayon.
+          {interpolate(dict.buyerPrices.confirmOos, { name: nameTl, unit: unit.labelTl })}
         </p>
         <div className="mt-2 flex gap-2">
           <Button
@@ -190,7 +197,7 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
             disabled={markOos.isPending}
             onClick={() => setConfirmingOos(false)}
           >
-            Hindi pa
+            {dict.buyerPrices.notYet}
           </Button>
           <Button
             variant="danger"
@@ -198,7 +205,7 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
             disabled={markOos.isPending}
             onClick={() => markOos.mutate({ productUnitId: unit.id })}
           >
-            {markOos.isPending ? "Minamarkahan…" : "Oo, ubos na"}
+            {markOos.isPending ? dict.buyerPrices.marking : dict.buyerPrices.yesOos}
           </Button>
         </div>
         {markOos.error && (
@@ -213,7 +220,11 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
       <div className="min-w-0">
         <div className="text-[15px]">{unit.labelTl}</div>
         {unit.previousCentavos !== null && (
-          <div className="price text-xs text-ink-3">kahapon {formatPeso(unit.previousCentavos)}</div>
+          <div className="price text-xs text-ink-3">
+            {interpolate(dict.buyerPrices.yesterdayPrice, {
+              price: formatPeso(unit.previousCentavos),
+            })}
+          </div>
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -234,15 +245,15 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
               : "border-warning bg-warning-soft text-warning",
           )}
         >
-          {unit.todayCentavos !== null ? formatPeso(unit.todayCentavos) : "Ilagay"}
+          {unit.todayCentavos !== null ? formatPeso(unit.todayCentavos) : dict.buyerPrices.enterPrice}
         </button>
         <button
           type="button"
           onClick={() => setConfirmingOos(true)}
           className="inline-flex h-tap items-center rounded-md border border-hair px-3 text-[13px] font-medium text-ink-2 active:bg-surface-2"
-          aria-label={`Markahang ubos ang ${nameTl} ${unit.labelTl}`}
+          aria-label={interpolate(dict.buyerPrices.markOosAria, { name: nameTl, unit: unit.labelTl })}
         >
-          Ubos
+          {dict.buyerPrices.markOosButton}
         </button>
       </div>
     </div>

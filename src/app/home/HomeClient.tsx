@@ -10,6 +10,9 @@ import { cn } from "~/lib/cn";
 import { formatManila, now, toManila } from "~/lib/datetime";
 import { nextDeliveryDate } from "~/lib/deliverySchedule";
 import { formatPeso } from "~/lib/format";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { interpolate } from "~/lib/i18n/interpolate";
+import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { trpc } from "~/lib/trpc/client";
 import { useCart } from "~/lib/useCart";
 import type { AppRouter } from "~/server/trpc/root";
@@ -19,24 +22,25 @@ type Catalog = RouterOutputs["catalog"]["today"];
 type CatalogProduct = Catalog["products"][number];
 type StoreMe = RouterOutputs["store"]["me"];
 
-function greeting(): string {
+function greeting(dict: Dictionary): string {
   const hour = toManila(now()).getHours();
-  if (hour < 12) return "Magandang umaga po,";
-  if (hour < 18) return "Magandang hapon po,";
-  return "Magandang gabi po,";
+  if (hour < 12) return dict.home.greetingMorning;
+  if (hour < 18) return dict.home.greetingAfternoon;
+  return dict.home.greetingEvening;
 }
 
-/** "mamayang umaga" / "bukas ng umaga" / "Lun, 13 Hul" for the delivery day. */
-function deliveryLabel(deliverOn: Date): string {
+/** "later this morning" / "tomorrow morning" / "Mon, 13 Jul" for the delivery day. */
+function deliveryLabel(dict: Dictionary, deliverOn: Date): string {
   const dayOf = (d: Date) => formatManila(d, "yyyy-MM-dd");
   const today = now();
-  if (dayOf(deliverOn) === dayOf(today)) return "mamayang umaga";
+  if (dayOf(deliverOn) === dayOf(today)) return dict.home.deliveryToday;
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-  if (dayOf(deliverOn) === dayOf(tomorrow)) return "bukas ng umaga";
+  if (dayOf(deliverOn) === dayOf(tomorrow)) return dict.home.deliveryTomorrow;
   return formatManila(deliverOn, "EEE, d MMM");
 }
 
 export function HomeClient() {
+  const dict = useDictionary();
   const storeQuery = trpc.store.me.useQuery();
   const catalogQuery = trpc.catalog.today.useQuery();
   const { cart, setQuantity, clear } = useCart();
@@ -101,13 +105,11 @@ export function HomeClient() {
   const cartCount = cartLines.reduce((sum, l) => sum + l.quantity, 0);
 
   if (storeQuery.isLoading || catalogQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load po…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (storeQuery.error || catalogQuery.error) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh po ang app.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -117,19 +119,19 @@ export function HomeClient() {
     <div className="flex flex-1 flex-col">
       <header className="flex items-start justify-between py-3">
         <div>
-          <div className="text-xs text-ink-2">{greeting()}</div>
+          <div className="text-xs text-ink-2">{greeting(dict)}</div>
           <div className="mt-0.5 text-[22px] font-medium leading-[1.15] tracking-tight">
             {store?.ownerName ?? "Suki"}
           </div>
         </div>
         <Link href="/orders" className="pt-1 text-[13px] font-medium text-action">
-          Mga order →
+          {dict.home.ordersLink}
         </Link>
       </header>
 
       {store && (
         <div className="mb-3 flex items-center justify-between rounded-md bg-surface-2 px-3.5 py-2.5 text-[13px]">
-          <span className="text-ink-2">Suki tab</span>
+          <span className="text-ink-2">{dict.home.sukiTab}</span>
           <span className="price font-medium">
             {formatPeso(store.sukiBalanceCentavos)}{" "}
             <span className="text-ink-3">/ {formatPeso(store.sukiLimitCentavos)}</span>
@@ -139,21 +141,25 @@ export function HomeClient() {
 
       {!store && (
         <div className="mb-3 rounded-md bg-warning-soft px-3.5 py-3 text-[13px] text-warning">
-          Wala pang tindahan sa account na ito. Tawagan po kami para ma-setup.
+          {dict.home.noStore}
         </div>
       )}
 
       <Input
         type="search"
         inputMode="search"
-        placeholder="Hanapin… (sibuyas, itlog, mantika)"
+        placeholder={dict.home.searchPlaceholder}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="h-[44px] text-[15px]"
       />
 
       <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
-        <CategoryPill label="Lahat" active={category === null} onClick={() => setCategory(null)} />
+        <CategoryPill
+          label={dict.home.allCategory}
+          active={category === null}
+          onClick={() => setCategory(null)}
+        />
         {categories.map((c) => (
           <CategoryPill
             key={c}
@@ -166,9 +172,7 @@ export function HomeClient() {
 
       <div className="mt-2 flex-1">
         {visibleProducts.length === 0 && (
-          <p className="pt-8 text-center text-[13px] text-ink-2">
-            Walang nahanap. Ibahin po ang hinahanap.
-          </p>
+          <p className="pt-8 text-center text-[13px] text-ink-2">{dict.home.noResults}</p>
         )}
         {visibleProducts.map((p) => (
           <ProductRow
@@ -184,7 +188,10 @@ export function HomeClient() {
         <div className="sticky bottom-0 -mx-5 mt-4 bg-bg px-5 pb-[max(env(safe-area-inset-bottom),12px)] pt-2">
           <Button size="lg" block onClick={() => setSheetOpen(true)}>
             <span>
-              Tingnan ang order ({cartCount} {cartCount === 1 ? "item" : "items"})
+              {interpolate(
+                cartCount === 1 ? dict.home.viewOrderButtonOne : dict.home.viewOrderButtonOther,
+                { count: cartCount },
+              )}
             </span>
             <span className="price">{formatPeso(cartTotal)}</span>
           </Button>
@@ -229,6 +236,7 @@ function ProductRow(props: {
   setQuantity: (unitId: string, qty: number) => void;
 }) {
   const { product, quantities, setQuantity } = props;
+  const dict = useDictionary();
   return (
     <div className="hair-b py-3">
       <div className="flex items-baseline gap-2">
@@ -244,7 +252,7 @@ function ProductRow(props: {
                 key={u.id}
                 className="inline-flex h-tap items-center rounded-md border border-hair bg-surface-2 px-3 text-[13px] text-ink-3"
               >
-                {u.labelTl} · ubos ngayon
+                {u.labelTl} · {dict.home.outOfStock}
               </span>
             );
           }
@@ -254,7 +262,7 @@ function ProductRow(props: {
                 key={u.id}
                 className="inline-flex h-tap items-center rounded-md border border-hair bg-surface-2 px-3 text-[13px] text-ink-3"
               >
-                {u.labelTl} · walang presyo
+                {u.labelTl} · {dict.home.noPriceBadge}
               </span>
             );
           }
@@ -278,7 +286,10 @@ function ProductRow(props: {
             >
               <button
                 type="button"
-                aria-label={`Bawasan ang ${product.nameTl} ${u.labelTl}`}
+                aria-label={interpolate(dict.home.decreaseAria, {
+                  name: product.nameTl,
+                  unit: u.labelTl,
+                })}
                 onClick={() => setQuantity(u.id, qty - 1)}
                 className="h-full w-11 text-action active:bg-surface-2"
               >
@@ -287,7 +298,10 @@ function ProductRow(props: {
               <span className="price min-w-8 text-center">{qty}</span>
               <button
                 type="button"
-                aria-label={`Dagdagan ang ${product.nameTl} ${u.labelTl}`}
+                aria-label={interpolate(dict.home.increaseAria, {
+                  name: product.nameTl,
+                  unit: u.labelTl,
+                })}
                 onClick={() => setQuantity(u.id, qty + 1)}
                 className="h-full w-11 text-action active:bg-surface-2"
               >
@@ -321,6 +335,7 @@ function CartSheet(props: {
   onClose: () => void;
 }) {
   const { store, lines, totalCentavos } = props;
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const place = trpc.orders.place.useMutation({
     onSuccess() {
@@ -346,9 +361,12 @@ function CartSheet(props: {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-pill bg-success-soft text-xl text-success">
             ✓
           </div>
-          <h2 className="mt-3 text-lg font-medium">Naipasa na po ang order!</h2>
+          <h2 className="mt-3 text-lg font-medium">{dict.cart.placedTitle}</h2>
           <p className="mt-1 text-[13px] text-ink-2">
-            {formatPeso(placed.totalCentavos)} · darating {deliveryLabel(placed.deliverOn)}
+            {interpolate(dict.cart.placedSubtitle, {
+              price: formatPeso(placed.totalCentavos),
+              when: deliveryLabel(dict, placed.deliverOn),
+            })}
           </p>
           <Button
             size="lg"
@@ -359,14 +377,14 @@ function CartSheet(props: {
               props.onClose();
             }}
           >
-            Sige po
+            {dict.cart.ok}
           </Button>
           <Link
             href="/orders"
             className="mt-3 inline-block text-[13px] font-medium text-action"
             onClick={() => props.onDone()}
           >
-            Tingnan ang mga order →
+            {dict.cart.viewOrders}
           </Link>
         </div>
       </SheetShell>
@@ -375,7 +393,7 @@ function CartSheet(props: {
 
   return (
     <SheetShell onClose={props.onClose}>
-      <h2 className="text-lg font-medium">Ang order ninyo</h2>
+      <h2 className="text-lg font-medium">{dict.cart.title}</h2>
 
       <div className="mt-2">
         {lines.map((l) => (
@@ -392,7 +410,7 @@ function CartSheet(props: {
               <span className="price text-[14px] font-medium">{formatPeso(l.totalCentavos)}</span>
               <button
                 type="button"
-                aria-label={`Alisin ang ${l.nameTl}`}
+                aria-label={interpolate(dict.cart.removeAria, { name: l.nameTl })}
                 onClick={() => props.setQuantity(l.productUnitId, 0)}
                 className="flex h-9 w-9 items-center justify-center rounded-md text-ink-3 active:bg-surface-2"
               >
@@ -404,14 +422,13 @@ function CartSheet(props: {
       </div>
 
       <div className="flex items-center justify-between py-3">
-        <span className="text-[14px] text-ink-2">Kabuuan (sa suki tab)</span>
+        <span className="text-[14px] text-ink-2">{dict.common.sukiTotalLabel}</span>
         <span className="price text-lg font-semibold">{formatPeso(totalCentavos)}</span>
       </div>
 
       {deliverOn && (
         <p className="pb-3 text-[13px] text-ink-2">
-          Darating po ang order {deliveryLabel(deliverOn)}. Presyo ngayon ang masusunod — hindi na
-          magbabago.
+          {interpolate(dict.cart.deliveryNote, { when: deliveryLabel(dict, deliverOn) })}
         </p>
       )}
 
@@ -430,18 +447,21 @@ function CartSheet(props: {
           })
         }
       >
-        {place.isPending ? "Ipinapasa…" : `I-place ang order · ${formatPeso(totalCentavos)}`}
+        {place.isPending
+          ? dict.cart.placing
+          : interpolate(dict.cart.placeButton, { price: formatPeso(totalCentavos) })}
       </Button>
     </SheetShell>
   );
 }
 
 function SheetShell(props: { children: React.ReactNode; onClose: () => void }) {
+  const dict = useDictionary();
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         type="button"
-        aria-label="Isara"
+        aria-label={dict.common.closeAria}
         onClick={props.onClose}
         className="absolute inset-0 bg-black/40"
       />

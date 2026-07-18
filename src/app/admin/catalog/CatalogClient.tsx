@@ -8,6 +8,9 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
+import type { Dictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import {
   upsertProductInput,
   upsertUnitInput,
@@ -23,30 +26,31 @@ type CatalogProduct = CatalogList[number];
 type CatalogUnit = CatalogProduct["units"][number];
 
 export function CatalogClient() {
+  const dict = useDictionary();
   const catalogQuery = trpc.admin.catalog.list.useQuery();
   const [creating, setCreating] = useState(false);
 
   if (catalogQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (catalogQuery.error || !catalogQuery.data) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh ang page.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="text-[17px] font-medium">Katalogo</h2>
-        {!creating && <Button onClick={() => setCreating(true)}>Bagong produkto</Button>}
+        <h2 className="text-[17px] font-medium">{dict.admin.catalog.title}</h2>
+        {!creating && (
+          <Button onClick={() => setCreating(true)}>{dict.admin.catalog.newProduct}</Button>
+        )}
       </div>
 
       {creating && (
         <div className="mt-3 rounded-md border border-hair bg-white px-4 py-4">
-          <h3 className="text-[14px] font-medium">Bagong produkto</h3>
+          <h3 className="text-[14px] font-medium">{dict.admin.catalog.newProductHeading}</h3>
           <ProductForm onDone={() => setCreating(false)} />
         </div>
       )}
@@ -62,6 +66,7 @@ export function CatalogClient() {
 
 function ProductRow(props: { product: CatalogProduct }) {
   const { product } = props;
+  const dict = useDictionary();
   const [editing, setEditing] = useState(false);
   const [addingUnit, setAddingUnit] = useState(false);
   const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
@@ -76,12 +81,14 @@ function ProductRow(props: { product: CatalogProduct }) {
             {product.category}
           </span>
           <span className="text-xs text-ink-3">
-            {product.source === "palengke" ? "palengke" : "bodega"}
-            {product.isPerishable && " · nabubulok"}
+            {product.source === "palengke"
+              ? dict.admin.catalog.sourcePalengkeShort
+              : dict.admin.catalog.sourceWarehouseShort}
+            {product.isPerishable && ` · ${dict.admin.catalog.perishableShort}`}
           </span>
           {!product.isActive && (
             <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs font-medium text-danger">
-              Hindi aktibo
+              {dict.admin.catalog.inactiveBadge}
             </span>
           )}
         </div>
@@ -91,14 +98,14 @@ function ProductRow(props: { product: CatalogProduct }) {
             className="h-9 px-3 text-[13px]"
             onClick={() => setEditing(!editing)}
           >
-            {editing ? "Isara" : "I-edit"}
+            {editing ? dict.admin.catalog.close : dict.admin.catalog.edit}
           </Button>
           <Button
             variant="ghost"
             className="h-9 px-3 text-[13px]"
             onClick={() => setAddingUnit(!addingUnit)}
           >
-            {addingUnit ? "Isara" : "Dagdag unit"}
+            {addingUnit ? dict.admin.catalog.close : dict.admin.catalog.addUnit}
           </Button>
         </div>
       </div>
@@ -111,7 +118,9 @@ function ProductRow(props: { product: CatalogProduct }) {
 
       {addingUnit && (
         <div className="mt-2 rounded-md border border-hair bg-white px-4 py-3">
-          <h4 className="text-[13px] font-medium">Bagong unit para sa {product.nameTl}</h4>
+          <h4 className="text-[13px] font-medium">
+            {interpolate(dict.admin.catalog.newUnitHeading, { name: product.nameTl })}
+          </h4>
           <UnitForm productId={product.id} onDone={() => setAddingUnit(false)} />
         </div>
       )}
@@ -138,7 +147,7 @@ function ProductRow(props: { product: CatalogProduct }) {
             >
               <span className="font-medium">{unit.labelTl}</span>
               <span className="text-ink-3">
-                {unit.weightGrams !== null ? `${unit.weightGrams} g` : "walang timbang"}
+                {unit.weightGrams !== null ? `${unit.weightGrams} g` : dict.admin.catalog.noWeight}
               </span>
             </button>
           ),
@@ -150,6 +159,7 @@ function ProductRow(props: { product: CatalogProduct }) {
 
 function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
   const { product } = props;
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const upsert = trpc.admin.catalog.upsertProduct.useMutation({
     onSuccess() {
@@ -178,38 +188,38 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
       className="mt-2 grid gap-3 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => upsert.mutate(values))}
     >
-      <Field label="Pangalan (Tagalog)" error={form.formState.errors.nameTl?.message}>
+      <Field label={dict.admin.catalog.productNameTl} error={form.formState.errors.nameTl?.message}>
         <Input {...form.register("nameTl")} placeholder="Sibuyas" />
       </Field>
-      <Field label="Pangalan (English)" error={form.formState.errors.nameEn?.message}>
+      <Field label={dict.admin.catalog.productNameEn} error={form.formState.errors.nameEn?.message}>
         <Input {...form.register("nameEn")} placeholder="Red onion" />
       </Field>
-      <Field label="Kategorya" error={form.formState.errors.category?.message}>
+      <Field label={dict.admin.catalog.category} error={form.formState.errors.category?.message}>
         <Input {...form.register("category")} placeholder="gulay" />
       </Field>
-      <Field label="Pinagmulan">
+      <Field label={dict.admin.catalog.source}>
         <select
           {...form.register("source")}
           className="h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px]"
         >
-          <option value="palengke">Palengke (araw-araw ang presyo)</option>
-          <option value="warehouse">Bodega</option>
+          <option value="palengke">{dict.admin.catalog.sourcePalengke}</option>
+          <option value="warehouse">{dict.admin.catalog.sourceWarehouse}</option>
         </select>
       </Field>
       <label className="flex items-center gap-2 text-[14px]">
         <input type="checkbox" {...form.register("isPerishable")} className="h-5 w-5" />
-        Nabubulok (perishable)
+        {dict.admin.catalog.perishable}
       </label>
       <label className="flex items-center gap-2 text-[14px]">
         <input type="checkbox" {...form.register("isActive")} className="h-5 w-5" />
-        Aktibo (lalabas sa katalogo)
+        {dict.admin.catalog.active}
       </label>
       <div className="flex gap-2 sm:col-span-2">
         <Button variant="secondary" onClick={props.onDone} disabled={upsert.isPending}>
-          Huwag
+          {dict.admin.catalog.cancel}
         </Button>
         <Button type="submit" disabled={upsert.isPending}>
-          {upsert.isPending ? "Sine-save…" : "I-save"}
+          {upsert.isPending ? dict.admin.catalog.saving : dict.admin.catalog.save}
         </Button>
       </div>
       {upsert.error && (
@@ -223,6 +233,7 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
 
 function UnitForm(props: { productId: string; unit?: CatalogUnit; onDone: () => void }) {
   const { unit } = props;
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const upsert = trpc.admin.catalog.upsertUnit.useMutation({
     onSuccess() {
@@ -251,16 +262,19 @@ function UnitForm(props: { productId: string; unit?: CatalogUnit; onDone: () => 
       className="mt-2 grid gap-3 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => upsert.mutate(values))}
     >
-      <Field label="Label (Tagalog)" error={form.formState.errors.labelTl?.message}>
+      <Field label={dict.admin.catalog.unitLabelTl} error={form.formState.errors.labelTl?.message}>
         <Input {...form.register("labelTl")} placeholder="1 kilo" />
       </Field>
-      <Field label="Label (English)" error={form.formState.errors.labelEn?.message}>
+      <Field label={dict.admin.catalog.unitLabelEn} error={form.formState.errors.labelEn?.message}>
         <Input {...form.register("labelEn")} placeholder="per kg" />
       </Field>
-      <Field label="Ayos (sort)" error={form.formState.errors.sortOrder?.message}>
+      <Field label={dict.admin.catalog.sortOrder} error={form.formState.errors.sortOrder?.message}>
         <Input {...form.register("sortOrder")} placeholder="01" />
       </Field>
-      <Field label="Timbang (gramo)" error={form.formState.errors.weightGrams?.message}>
+      <Field
+        label={dict.admin.catalog.weightGrams}
+        error={form.formState.errors.weightGrams?.message}
+      >
         <Input
           type="number"
           inputMode="numeric"
@@ -272,14 +286,14 @@ function UnitForm(props: { productId: string; unit?: CatalogUnit; onDone: () => 
       </Field>
       <label className="flex items-center gap-2 text-[14px]">
         <input type="checkbox" {...form.register("isActive")} className="h-5 w-5" />
-        Aktibo
+        {dict.admin.catalog.unitActive}
       </label>
       <div className="flex gap-2 sm:col-span-2">
         <Button variant="secondary" onClick={props.onDone} disabled={upsert.isPending}>
-          Huwag
+          {dict.admin.catalog.cancel}
         </Button>
         <Button type="submit" disabled={upsert.isPending}>
-          {upsert.isPending ? "Sine-save…" : "I-save"}
+          {upsert.isPending ? dict.admin.catalog.saving : dict.admin.catalog.save}
         </Button>
       </div>
       {upsert.error && (

@@ -4,20 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "~/lib/cn";
-
-const LINKS = [
-  { href: "/admin/orders", label: "Padala" },
-  { href: "/admin/catalog", label: "Katalogo" },
-  { href: "/admin/suki", label: "Suki" },
-  { href: "/admin/stores", label: "Mga tindahan" },
-  { href: "/buyer/prices", label: "Presyo" },
-] as const;
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 
 export function AdminNav() {
+  const dict = useDictionary();
   const pathname = usePathname();
+  const links = [
+    { href: "/admin/orders", label: dict.admin.nav.orders },
+    { href: "/admin/catalog", label: dict.admin.nav.catalog },
+    { href: "/admin/suki", label: dict.admin.nav.suki },
+    { href: "/admin/stores", label: dict.admin.nav.stores },
+    { href: "/buyer/prices", label: dict.admin.nav.prices },
+  ] as const;
+
   return (
     <nav className="flex gap-1.5">
-      {LINKS.map((link) => {
+      {links.map((link) => {
         const active = pathname.startsWith(link.href);
         return (
           <Link

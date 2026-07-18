@@ -4,10 +4,12 @@ import { useActionState } from "react";
 
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 
 import { startOtpAction, type LoginActionState } from "./actions";
 
 export function PhoneEntryForm() {
+  const dict = useDictionary();
   const [state, formAction, pending] = useActionState<LoginActionState, FormData>(
     startOtpAction,
     null,
@@ -16,7 +18,7 @@ export function PhoneEntryForm() {
   return (
     <form action={formAction} className="mt-9">
       <label htmlFor="phone" className="mb-2 block text-xs text-ink-2">
-        Mobile number
+        {dict.login.phoneLabel}
       </label>
       <div className="flex gap-[10px]">
         <div className="flex h-14 w-[76px] items-center justify-center gap-1.5 rounded-md bg-[#F1ECE2] text-base font-medium text-ink">
@@ -43,7 +45,7 @@ export function PhoneEntryForm() {
       ) : null}
 
       <Button type="submit" block size="lg" className="mt-6" disabled={pending}>
-        {pending ? "Pinapadala…" : "Magpadala ng code"}
+        {pending ? dict.login.sending : dict.login.sendCode}
       </Button>
     </form>
   );

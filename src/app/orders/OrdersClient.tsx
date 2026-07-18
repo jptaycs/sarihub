@@ -5,29 +5,36 @@ import Link from "next/link";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
+import type { Dictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 
-const STATUS_LABEL: Record<string, { text: string; className: string }> = {
-  draft: { text: "Draft", className: "bg-surface-2 text-ink-2" },
-  submitted: { text: "Naipasa", className: "bg-warning-soft text-warning" },
-  packed: { text: "Nakahanda", className: "bg-warning-soft text-warning" },
-  in_transit: { text: "Papunta na", className: "bg-warning-soft text-warning" },
-  delivered: { text: "Naihatid", className: "bg-success-soft text-success" },
-  settled: { text: "Bayad na", className: "bg-success-soft text-success" },
-  cancelled: { text: "Kanselado", className: "bg-surface-2 text-danger" },
-};
+function statusLabel(dict: Dictionary): Record<string, { text: string; className: string }> {
+  return {
+    draft: { text: dict.orders.statusDraft, className: "bg-surface-2 text-ink-2" },
+    submitted: { text: dict.orders.statusSubmitted, className: "bg-warning-soft text-warning" },
+    packed: { text: dict.orders.statusPacked, className: "bg-warning-soft text-warning" },
+    in_transit: {
+      text: dict.orders.statusInTransit,
+      className: "bg-warning-soft text-warning",
+    },
+    delivered: { text: dict.orders.statusDelivered, className: "bg-success-soft text-success" },
+    settled: { text: dict.orders.statusSettled, className: "bg-success-soft text-success" },
+    cancelled: { text: dict.orders.statusCancelled, className: "bg-surface-2 text-danger" },
+  };
+}
 
 export function OrdersClient() {
+  const dict = useDictionary();
   const ordersQuery = trpc.orders.list.useQuery();
 
   if (ordersQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load po…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (ordersQuery.error) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh po ang app.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -35,18 +42,20 @@ export function OrdersClient() {
   if (orders.length === 0) {
     return (
       <div className="pt-10 text-center">
-        <p className="text-[13px] text-ink-2">Wala pa po kayong order.</p>
+        <p className="text-[13px] text-ink-2">{dict.orders.empty}</p>
         <Link href="/home" className="mt-2 inline-block text-[14px] font-medium text-action">
-          Mag-order na →
+          {dict.orders.startOrdering}
         </Link>
       </div>
     );
   }
 
+  const statuses = statusLabel(dict);
+
   return (
     <div>
       {orders.map((order) => {
-        const status = STATUS_LABEL[order.status] ?? STATUS_LABEL.draft!;
+        const status = statuses[order.status] ?? statuses.draft!;
         return (
           <Link
             key={order.id}
@@ -55,7 +64,7 @@ export function OrdersClient() {
           >
             <div className="flex items-center justify-between">
               <span className="text-[14px] font-medium">
-                Dating: {formatManilaDate(order.deliverOn)}
+                {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn) })}
               </span>
               <span
                 className={cn(

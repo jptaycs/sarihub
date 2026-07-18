@@ -4,6 +4,8 @@ import { and, eq } from "drizzle-orm";
 
 import { createSupabaseServer } from "~/lib/supabase/server";
 import { parsePhPhone } from "~/lib/format";
+import { getDictionary } from "~/lib/i18n/dictionaries";
+import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import { db } from "~/server/db";
 import { staff, type Staff } from "~/server/db/schema";
 
@@ -31,14 +33,14 @@ export type StartOtpResult =
   | { ok: true; phoneE164: string }
   | { ok: false; reason: "invalid_phone" | "rate_limited" | "send_failed"; message: string };
 
-export async function startPhoneOtp(rawPhone: string): Promise<StartOtpResult> {
+export async function startPhoneOtp(
+  rawPhone: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<StartOtpResult> {
+  const dict = getDictionary(locale).login.errors;
   const phoneE164 = parsePhPhone(rawPhone);
   if (!phoneE164) {
-    return {
-      ok: false,
-      reason: "invalid_phone",
-      message: "Hindi tama ang numero. Ipasok po ang 10-digit na mobile.",
-    };
+    return { ok: false, reason: "invalid_phone", message: dict.invalidPhone };
   }
 
   const supabase = await createSupabaseServer();
@@ -49,17 +51,9 @@ export async function startPhoneOtp(rawPhone: string): Promise<StartOtpResult> {
 
   if (error) {
     if (error.status === 429) {
-      return {
-        ok: false,
-        reason: "rate_limited",
-        message: "Maraming subok po. Subukan ulit pagkalipas ng ilang minuto.",
-      };
+      return { ok: false, reason: "rate_limited", message: dict.rateLimited };
     }
-    return {
-      ok: false,
-      reason: "send_failed",
-      message: "Hindi namin nasend ang code. Subukan po ulit.",
-    };
+    return { ok: false, reason: "send_failed", message: dict.sendFailed };
   }
 
   return { ok: true, phoneE164 };
@@ -69,7 +63,12 @@ export type VerifyOtpResult =
   | { ok: true }
   | { ok: false; reason: "invalid_code" | "expired" | "verify_failed"; message: string };
 
-export async function verifyPhoneOtp(phoneE164: string, token: string): Promise<VerifyOtpResult> {
+export async function verifyPhoneOtp(
+  phoneE164: string,
+  token: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<VerifyOtpResult> {
+  const dict = getDictionary(locale).verify.errors;
   const supabase = await createSupabaseServer();
   const { error } = await supabase.auth.verifyOtp({
     phone: phoneE164,
@@ -79,24 +78,12 @@ export async function verifyPhoneOtp(phoneE164: string, token: string): Promise<
 
   if (error) {
     if (/expired/i.test(error.message)) {
-      return {
-        ok: false,
-        reason: "expired",
-        message: "Expired na po ang code. Magpadala ulit.",
-      };
+      return { ok: false, reason: "expired", message: dict.expired };
     }
     if (error.status === 400 || /invalid|incorrect/i.test(error.message)) {
-      return {
-        ok: false,
-        reason: "invalid_code",
-        message: "Mali po ang code. Subukan ulit.",
-      };
+      return { ok: false, reason: "invalid_code", message: dict.invalidCode };
     }
-    return {
-      ok: false,
-      reason: "verify_failed",
-      message: "May problema sa pag-verify. Subukan po ulit.",
-    };
+    return { ok: false, reason: "verify_failed", message: dict.verifyFailed };
   }
 
   return { ok: true };

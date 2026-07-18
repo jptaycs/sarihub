@@ -8,6 +8,7 @@ import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import { formatManila } from "~/lib/datetime";
 import { formatPeso, formatPhone, pesosToCentavos } from "~/lib/format";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -16,17 +17,16 @@ type Exposure = RouterOutputs["admin"]["suki"]["exposure"];
 type ExposureStore = Exposure["stores"][number];
 
 export function SukiClient() {
+  const dict = useDictionary();
   const exposureQuery = trpc.admin.suki.exposure.useQuery();
   const [openStoreId, setOpenStoreId] = useState<string | null>(null);
 
   if (exposureQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (exposureQuery.error || !exposureQuery.data) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh ang page.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -35,9 +35,9 @@ export function SukiClient() {
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[17px] font-medium">Suki exposure</h2>
+        <h2 className="text-[17px] font-medium">{dict.admin.suki.title}</h2>
         <p className="text-[14px] text-ink-2">
-          Kabuuang pautang:{" "}
+          {dict.admin.suki.totalOutstanding}{" "}
           <span className="price font-semibold text-ink">{formatPeso(totalOutstanding)}</span>
         </p>
       </div>
@@ -52,7 +52,7 @@ export function SukiClient() {
           />
         ))}
         {stores.length === 0 && (
-          <p className="pt-8 text-center text-[13px] text-ink-2">Wala pang tindahan.</p>
+          <p className="pt-8 text-center text-[13px] text-ink-2">{dict.admin.suki.empty}</p>
         )}
       </div>
     </div>
@@ -61,6 +61,7 @@ export function SukiClient() {
 
 function StoreRow(props: { store: ExposureStore; open: boolean; onToggle: () => void }) {
   const { store, open } = props;
+  const dict = useDictionary();
   const limit = store.sukiLimitCentavos;
   const balance = store.sukiBalanceCentavos;
   const pct = limit > 0n ? Math.min(Number((balance * 100n) / limit), 100) : 0;
@@ -74,7 +75,7 @@ function StoreRow(props: { store: ExposureStore; open: boolean; onToggle: () => 
             <span className="text-[14px] font-medium">{store.name}</span>
             <span className="text-[13px] text-ink-2">
               {store.ownerName} · {formatPhone(store.phoneE164)}
-              {store.routeName ? ` · ${store.routeName}` : " · walang ruta"}
+              {store.routeName ? ` · ${store.routeName}` : ` · ${dict.admin.stores.noRoute.toLowerCase()}`}
             </span>
           </div>
           <span className={cn("price text-[14px]", nearLimit ? "font-semibold text-danger" : "font-medium")}>
@@ -98,6 +99,7 @@ function StoreRow(props: { store: ExposureStore; open: boolean; onToggle: () => 
 }
 
 function StoreLedgerPanel(props: { storeId: string }) {
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const ledgerQuery = trpc.admin.suki.ledger.useQuery({ storeId: props.storeId });
 
@@ -119,7 +121,7 @@ function StoreLedgerPanel(props: { storeId: string }) {
   return (
     <div className="mt-3 grid gap-4 lg:grid-cols-2">
       <div className="rounded-md border border-hair bg-white px-4 py-3">
-        <h4 className="text-[13px] font-medium">Magtala ng bayad</h4>
+        <h4 className="text-[13px] font-medium">{dict.admin.suki.recordPayment}</h4>
         <div className="mt-2 flex gap-2">
           <div className="flex h-tap flex-1 items-center gap-1 rounded-md border border-hair-strong bg-white px-3">
             <span className="text-ink-2">₱</span>
@@ -129,7 +131,7 @@ function StoreLedgerPanel(props: { storeId: string }) {
               onChange={(e) => setPaymentDraft(e.target.value)}
               placeholder="0.00"
               className="price w-full bg-transparent text-[15px] outline-none"
-              aria-label="Halaga ng bayad"
+              aria-label={dict.admin.suki.paymentAmountAria}
             />
           </div>
           <Button
@@ -142,20 +144,20 @@ function StoreLedgerPanel(props: { storeId: string }) {
               );
             }}
           >
-            {payment.isPending ? "Sandali…" : "Itala"}
+            {payment.isPending ? dict.admin.orders.updating : dict.admin.suki.recordButton}
           </Button>
         </div>
         {payment.error && (
           <p className="mt-2 text-xs font-medium text-danger">{payment.error.message}</p>
         )}
 
-        <h4 className="mt-4 text-[13px] font-medium">Adjustment (may dahilan)</h4>
+        <h4 className="mt-4 text-[13px] font-medium">{dict.admin.suki.adjustmentHeading}</h4>
         <div className="mt-2 flex gap-2">
           <button
             type="button"
             onClick={() => setAdjustNegative(!adjustNegative)}
             className="h-tap w-12 rounded-md border border-hair-strong text-lg font-medium hover:bg-surface-2"
-            aria-label={adjustNegative ? "Bawas sa utang" : "Dagdag sa utang"}
+            aria-label={adjustNegative ? dict.admin.suki.decreaseAria : dict.admin.suki.increaseAria}
           >
             {adjustNegative ? "−" : "+"}
           </button>
@@ -167,14 +169,14 @@ function StoreLedgerPanel(props: { storeId: string }) {
               onChange={(e) => setAdjustDraft(e.target.value)}
               placeholder="0.00"
               className="price w-full bg-transparent text-[15px] outline-none"
-              aria-label="Halaga ng adjustment"
+              aria-label={dict.admin.suki.adjustmentAmountAria}
             />
           </div>
         </div>
         <Input
           value={adjustReason}
           onChange={(e) => setAdjustReason(e.target.value)}
-          placeholder="Dahilan (hal. sirang itlog, sobrang singil)"
+          placeholder={dict.admin.suki.adjustmentReasonPlaceholder}
           className="mt-2"
         />
         <Button
@@ -204,7 +206,7 @@ function StoreLedgerPanel(props: { storeId: string }) {
             );
           }}
         >
-          {adjustment.isPending ? "Sandali…" : "Itala ang adjustment"}
+          {adjustment.isPending ? dict.admin.orders.updating : dict.admin.suki.recordAdjustment}
         </Button>
         {adjustment.error && (
           <p className="mt-2 text-xs font-medium text-danger">{adjustment.error.message}</p>
@@ -212,17 +214,23 @@ function StoreLedgerPanel(props: { storeId: string }) {
       </div>
 
       <div className="rounded-md border border-hair bg-white px-4 py-3">
-        <h4 className="text-[13px] font-medium">Huling galaw ng tab</h4>
-        {ledgerQuery.isLoading && <p className="mt-2 text-[13px] text-ink-2">Nilo-load…</p>}
+        <h4 className="text-[13px] font-medium">{dict.admin.suki.recentActivity}</h4>
+        {ledgerQuery.isLoading && (
+          <p className="mt-2 text-[13px] text-ink-2">{dict.common.loading}</p>
+        )}
         {ledgerQuery.data && ledgerQuery.data.length === 0 && (
-          <p className="mt-2 text-[13px] text-ink-2">Wala pang galaw.</p>
+          <p className="mt-2 text-[13px] text-ink-2">{dict.admin.suki.noActivity}</p>
         )}
         <div className="mt-1 max-h-72 overflow-y-auto">
           {ledgerQuery.data?.map((entry) => (
             <div key={entry.id} className="hair-b flex items-baseline justify-between py-2 text-[13px]">
               <div className="min-w-0">
                 <span className="font-medium">
-                  {entry.kind === "charge" ? "Order" : entry.kind === "payment" ? "Bayad" : "Adjustment"}
+                  {entry.kind === "charge"
+                    ? dict.admin.suki.kindCharge
+                    : entry.kind === "payment"
+                      ? dict.admin.suki.kindPayment
+                      : dict.admin.suki.kindAdjustment}
                 </span>
                 {entry.reason && entry.kind !== "charge" && (
                   <span className="text-ink-2"> · {entry.reason}</span>

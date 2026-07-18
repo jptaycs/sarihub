@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { cn } from "~/lib/cn";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { interpolate } from "~/lib/i18n/interpolate";
 
 import { resendOtpAction, verifyOtpAction, type ResendState, type VerifyState } from "./actions";
 
@@ -10,6 +12,7 @@ const CODE_LEN = 6;
 const RESEND_SECONDS = 47;
 
 export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
+  const dict = useDictionary();
   const [verifyState, verifyAction, verifying] = useActionState<VerifyState, FormData>(
     verifyOtpAction,
     null,
@@ -94,7 +97,7 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
       <div
         className="flex justify-between gap-[10px]"
         role="group"
-        aria-label="6-digit na code"
+        aria-label={dict.verify.codeGroupLabel}
       >
         {digits.map((d, i) => {
           const isFocus = d === "" && digits.slice(0, i).every((x) => x !== "");
@@ -111,7 +114,7 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
               inputMode="numeric"
               autoComplete={i === 0 ? "one-time-code" : "off"}
               maxLength={1}
-              aria-label={`Digit ${i + 1}`}
+              aria-label={interpolate(dict.verify.digitLabel, { n: i + 1 })}
               className={cn(
                 "tnum h-16 flex-1 rounded-md border bg-white text-center text-[28px] font-medium text-ink outline-none transition-shadow",
                 isFocus
@@ -131,13 +134,9 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
 
       <div className="mt-6 flex items-center justify-between">
         <span className="text-[13px] text-ink-2">
-          {seconds > 0 ? (
-            <>
-              Mag-resend after 0:{seconds.toString().padStart(2, "0")}
-            </>
-          ) : (
-            "Pwede nang mag-resend"
-          )}
+          {seconds > 0
+            ? interpolate(dict.verify.resendIn, { seconds: seconds.toString().padStart(2, "0") })
+            : dict.verify.resendReady}
         </span>
 
         <form action={resendAction}>
@@ -151,7 +150,7 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
               seconds > 0 ? "text-ink-3" : "text-ink",
             )}
           >
-            Resend code
+            {dict.verify.resendButton}
           </button>
         </form>
       </div>

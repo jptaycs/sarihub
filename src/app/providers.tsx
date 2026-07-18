@@ -5,9 +5,17 @@ import { httpBatchLink } from "@trpc/client";
 import { useState } from "react";
 import superjson from "superjson";
 
+import { LanguageProvider } from "~/lib/i18n/LanguageProvider";
+import type { Locale } from "~/lib/i18n/locale";
 import { trpc } from "~/lib/trpc/client";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale: Locale;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -28,8 +36,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc.Provider>
+    <LanguageProvider initialLocale={initialLocale}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </trpc.Provider>
+    </LanguageProvider>
   );
 }

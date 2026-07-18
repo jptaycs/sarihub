@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/Button";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 
 /**
  * Bare-bones signature canvas for the suki handoff. Pointer events cover
  * finger, stylus, and mouse. Parent pulls the drawing out via `getBlob`.
  */
 export function SignaturePad(props: { onChange: (hasInk: boolean) => void }) {
+  const dict = useDictionary();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
   const [hasInk, setHasInk] = useState(false);
@@ -74,7 +76,7 @@ export function SignaturePad(props: { onChange: (hasInk: boolean) => void }) {
           props.onChange(false);
         }}
       >
-        Burahin
+        {dict.signaturePad.clear}
       </Button>
     </div>
   );

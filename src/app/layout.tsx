@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 
 import "./globals.css";
 
+import { getServerLocale } from "~/lib/i18n/server";
 import { Providers } from "./providers";
 import { RegisterSW } from "./RegisterSW";
 
@@ -27,11 +28,12 @@ export const viewport: Viewport = {
   themeColor: "#FAF7F2",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getServerLocale();
   return (
-    <html lang="tl" className={inter.variable}>
+    <html lang={locale} className={inter.variable}>
       <body>
-        <Providers>{children}</Providers>
+        <Providers initialLocale={locale}>{children}</Providers>
         <RegisterSW />
       </body>
     </html>

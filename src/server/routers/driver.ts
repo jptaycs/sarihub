@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
+import { getDictionary } from "~/lib/i18n/dictionaries";
 import { markDeliveredInput } from "~/lib/schemas/driver";
 import { orderItems, orders, productUnits, products, routes, stores } from "~/server/db/schema";
 import { driverProcedure, router } from "~/server/trpc/init";
@@ -108,7 +109,10 @@ export const driverRouter = router({
       );
       const order = rows[0];
       if (!order) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang order." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getDictionary(ctx.locale).admin.errors.orderNotFound,
+        });
       }
       if (order.status === "delivered" || order.status === "settled") {
         // Double-tap on a bumpy road — the delivery already counted.
@@ -117,7 +121,7 @@ export const driverRouter = router({
       if (order.status === "cancelled" || order.status === "draft") {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Hindi na deliverable ang order na ito.",
+          message: getDictionary(ctx.locale).driver.errors.notDeliverable,
         });
       }
 

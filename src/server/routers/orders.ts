@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { now } from "~/lib/datetime";
 import { cutoffInstant } from "~/lib/deliverySchedule";
+import { getDictionary } from "~/lib/i18n/dictionaries";
 import { placeOrderInput } from "~/lib/schemas/order";
 import { orderItems, orders, productUnits, products, routes, stores } from "~/server/db/schema";
 import { cancelOrder, placeOrder } from "~/server/services/orders";
@@ -28,7 +29,7 @@ const CANCEL_REASON_TO_CODE = {
 
 export const ordersRouter = router({
   place: protectedProcedure.input(placeOrderInput).mutation(async ({ ctx, input }) => {
-    const result = await placeOrder(ctx.db, ctx.user.id, input);
+    const result = await placeOrder(ctx.db, ctx.user.id, input, ctx.locale);
     if (!result.ok) {
       throw new TRPCError({ code: REASON_TO_CODE[result.reason], message: result.message });
     }
@@ -102,7 +103,10 @@ export const ordersRouter = router({
         .where(eq(stores.ownerUserId, ctx.user.id))
         .limit(1);
       if (!store) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi po mahanap ang order." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getDictionary(ctx.locale).orders.errors.notFound,
+        });
       }
 
       const [order] = await ctx.db
@@ -126,7 +130,10 @@ export const ordersRouter = router({
         .where(and(eq(orders.id, input.orderId), eq(orders.storeId, store.id)))
         .limit(1);
       if (!order) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi po mahanap ang order." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getDictionary(ctx.locale).orders.errors.notFound,
+        });
       }
 
       const items = await ctx.db
@@ -155,7 +162,7 @@ export const ordersRouter = router({
   cancel: protectedProcedure
     .input(z.object({ orderId: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const result = await cancelOrder(ctx.db, ctx.user.id, input.orderId);
+      const result = await cancelOrder(ctx.db, ctx.user.id, input.orderId, ctx.locale);
       if (!result.ok) {
         throw new TRPCError({ code: CANCEL_REASON_TO_CODE[result.reason], message: result.message });
       }

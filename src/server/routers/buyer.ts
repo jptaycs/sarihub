@@ -5,6 +5,7 @@ import { addHours } from "date-fns";
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { formatManila, now } from "~/lib/datetime";
+import { getDictionary } from "~/lib/i18n/dictionaries";
 import { markOutOfStockInput, setPriceInput } from "~/lib/schemas/price";
 import { dailyPrices, productUnits, products } from "~/server/db/schema";
 import { markUnitOutOfStock, stockoutsForDay } from "~/server/services/stockouts";
@@ -131,7 +132,10 @@ export const buyerRouter = router({
       )
       .limit(1);
     if (!unit) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Hindi po mahanap ang item na iyan." });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: getDictionary(ctx.locale).buyerPrices.errors.unknownUnit,
+      });
     }
 
     await ctx.db
@@ -182,7 +186,12 @@ export const buyerRouter = router({
 
   /** Unit is unsourceable today: flag it and cancel the line on today's submitted orders. */
   markOutOfStock: buyerProcedure.input(markOutOfStockInput).mutation(async ({ ctx, input }) => {
-    const result = await markUnitOutOfStock(ctx.db, ctx.staff.userId, input.productUnitId);
+    const result = await markUnitOutOfStock(
+      ctx.db,
+      ctx.staff.userId,
+      input.productUnitId,
+      ctx.locale,
+    );
     if (!result.ok) {
       throw new TRPCError({ code: "BAD_REQUEST", message: result.message });
     }

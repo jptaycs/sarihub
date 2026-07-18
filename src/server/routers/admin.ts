@@ -5,6 +5,8 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
 import { parsePhPhone } from "~/lib/format";
+import { getDictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
 import {
   createStoreInput,
   recordAdjustmentInput,
@@ -122,13 +124,14 @@ const ordersAdminRouter = router({
         sql`SELECT status FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
       );
       const order = rows[0];
+      const dict = getDictionary(ctx.locale).admin.errors;
       if (!order) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang order." });
+        throw new TRPCError({ code: "NOT_FOUND", message: dict.orderNotFound });
       }
       if (order.status !== transition.from) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: `Hindi pwede: ${order.status} → ${input.status}.`,
+          message: interpolate(dict.badTransition, { from: order.status, to: input.status }),
         });
       }
 
@@ -173,7 +176,10 @@ const catalogAdminRouter = router({
         .where(eq(products.id, id))
         .returning({ id: products.id });
       if (!updated) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang produkto." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getDictionary(ctx.locale).admin.errors.productNotFound,
+        });
       }
       return { id: updated.id };
     }
@@ -190,7 +196,10 @@ const catalogAdminRouter = router({
       .where(eq(products.id, fields.productId))
       .limit(1);
     if (!product) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang produkto." });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: getDictionary(ctx.locale).admin.errors.productNotFound,
+      });
     }
 
     if (id) {
@@ -200,7 +209,10 @@ const catalogAdminRouter = router({
         .where(eq(productUnits.id, id))
         .returning({ id: productUnits.id });
       if (!updated) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang unit." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getDictionary(ctx.locale).admin.errors.unitNotFound,
+        });
       }
       return { id: updated.id };
     }
@@ -260,14 +272,17 @@ const sukiAdminRouter = router({
       .where(eq(stores.id, input.storeId))
       .limit(1);
     if (!store) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang tindahan." });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: getDictionary(ctx.locale).admin.errors.storeNotFound,
+      });
     }
 
     await ctx.db.insert(sukiLedger).values({
       storeId: input.storeId,
       kind: "payment",
       amountCentavos: -BigInt(input.amountCentavos),
-      reason: input.note?.length ? input.note : "Bayad",
+      reason: input.note?.length ? input.note : getDictionary(ctx.locale).admin.errors.defaultPaymentReason,
     });
     return { ok: true };
   }),
@@ -282,7 +297,10 @@ const sukiAdminRouter = router({
         .where(eq(stores.id, input.storeId))
         .limit(1);
       if (!store) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang tindahan." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: getDictionary(ctx.locale).admin.errors.storeNotFound,
+        });
       }
 
       await ctx.db.insert(sukiLedger).values({
@@ -328,12 +346,10 @@ const storesAdminRouter = router({
    * as the store owner.
    */
   create: adminProcedure.input(createStoreInput).mutation(async ({ ctx, input }) => {
+    const dict = getDictionary(ctx.locale).admin.errors;
     const phoneE164 = parsePhPhone(input.phone);
     if (!phoneE164) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Hindi tama ang numero. Ipasok ang 10-digit na mobile.",
-      });
+      throw new TRPCError({ code: "BAD_REQUEST", message: dict.invalidPhone });
     }
 
     // Supabase stores auth.users.phone without the leading "+".
@@ -342,11 +358,7 @@ const storesAdminRouter = router({
     );
     const authUser = authUsers[0];
     if (!authUser) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message:
-          "Walang account ang numerong iyan. Papag-sign-in-in muna ang may-ari sa app (OTP), saka ulitin.",
-      });
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.noAccountForPhone });
     }
 
     const [existingStaff] = await ctx.db
@@ -355,10 +367,7 @@ const storesAdminRouter = router({
       .where(eq(staff.userId, authUser.id))
       .limit(1);
     if (existingStaff) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "Staff ang account na iyan — hindi pwedeng maging may-ari ng tindahan.",
-      });
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.phoneIsStaff });
     }
 
     try {
@@ -379,10 +388,7 @@ const storesAdminRouter = router({
     } catch (error) {
       // 23505: the phone or auth user already owns a store.
       if (error instanceof Error && "code" in error && error.code === "23505") {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "May tindahan na ang numero o account na iyan.",
-        });
+        throw new TRPCError({ code: "CONFLICT", message: dict.storeAlreadyExists });
       }
       throw error;
     }
@@ -400,7 +406,10 @@ const storesAdminRouter = router({
       .where(eq(stores.id, id))
       .returning({ id: stores.id });
     if (!updated) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Hindi mahanap ang tindahan." });
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: getDictionary(ctx.locale).admin.errors.storeNotFound,
+      });
     }
     return { id: updated.id };
   }),

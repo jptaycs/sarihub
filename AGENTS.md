@@ -54,7 +54,8 @@ src/
   components/ui/        Shared primitives (Button, Input, Logo)
   lib/                  Client-safe helpers: format (peso/phone), datetime (Manila tz),
                         deliverySchedule (cutoff + weekday bitmask), useCart, schemas/ (zod,
-                        shared by forms and tRPC inputs), supabase/, trpc/
+                        shared by forms and tRPC inputs), supabase/, trpc/, i18n/ (dictionaries,
+                        LanguageProvider, getServerLocale — see below)
   server/
     db/schema/          Drizzle schema, one file per domain
     routers/            tRPC routers (catalog, store, orders)
@@ -63,7 +64,7 @@ src/
 drizzle/                Generated migrations + RLS/trigger SQL + seed.sql
 ```
 
-Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datetime`, never `new Date()`. Tagalog-first copy in every user-facing string.
+Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datetime`, never `new Date()`. Tagalog-first copy in every user-facing string — but the app is bilingual (Tagalog/English) via a switcher on `/login`, so **every new user-facing string, including server-emitted tRPC/Server Action error messages, must go through `src/lib/i18n/dictionaries/{tl,en}.ts`**, never a hardcoded literal. Add the key to `tl.ts` first (canonical), then `en.ts` (TypeScript enforces the same shape). Client components read strings via `useDictionary()`/`useLocale()` from `~/lib/i18n/LanguageProvider`; Server Components and services via `getDictionary(await getServerLocale())`, threading `Locale` down as a parameter the same way `Db`/`userId` are threaded. Use `interpolate(template, vars)` for any string with a dynamic value. DB-sourced content (product names — already dual `nameTl`/`nameEn`, categories, store/owner/route names) and date formatting are explicitly out of scope for the toggle; see the dictionaries' file comments for why.
 
 ## Roadmap / to-do
 

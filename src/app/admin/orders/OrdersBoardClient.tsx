@@ -7,6 +7,9 @@ import { Button } from "~/components/ui/Button";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
+import type { Dictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -14,35 +17,39 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type Board = RouterOutputs["admin"]["orders"]["board"];
 type BoardOrder = Board["orders"][number];
 
-const COLUMNS = [
-  { status: "submitted", label: "Naipasa" },
-  { status: "packed", label: "Nakahanda" },
-  { status: "in_transit", label: "Papunta na" },
-  { status: "delivered", label: "Naihatid" },
-] as const;
+function columns(dict: Dictionary) {
+  return [
+    { status: "submitted", label: dict.orders.statusSubmitted },
+    { status: "packed", label: dict.orders.statusPacked },
+    { status: "in_transit", label: dict.orders.statusInTransit },
+    { status: "delivered", label: dict.orders.statusDelivered },
+  ] as const;
+}
 
 /** The single forward step out of each column, if any. */
-const NEXT_STEP: Record<string, { status: "packed" | "in_transit" | "delivered"; label: string }> =
-  {
-    submitted: { status: "packed", label: "→ Nakahanda" },
-    packed: { status: "in_transit", label: "→ Papunta na" },
-    in_transit: { status: "delivered", label: "→ Naihatid" },
+function nextStep(
+  dict: Dictionary,
+): Record<string, { status: "packed" | "in_transit" | "delivered"; label: string }> {
+  return {
+    submitted: { status: "packed", label: dict.admin.orders.advanceToPacked },
+    packed: { status: "in_transit", label: dict.admin.orders.advanceToInTransit },
+    in_transit: { status: "delivered", label: dict.admin.orders.advanceToDelivered },
   };
+}
 
 export function OrdersBoardClient() {
+  const dict = useDictionary();
   const boardQuery = trpc.admin.orders.board.useQuery(undefined, {
     refetchInterval: 60_000,
   });
   const [routeFilter, setRouteFilter] = useState<string | null>(null);
 
   if (boardQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">Nilo-load…</p>;
+    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
   if (boardQuery.error || !boardQuery.data) {
     return (
-      <p className="pt-8 text-center text-[13px] text-danger">
-        May problema sa koneksyon. I-refresh ang page.
-      </p>
+      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
     );
   }
 
@@ -51,14 +58,17 @@ export function OrdersBoardClient() {
     (o) => routeFilter === null || o.routeId === routeFilter,
   );
   const cancelled = visibleOrders.filter((o) => o.status === "cancelled");
+  const cols = columns(dict);
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[17px] font-medium">Padala ngayon · {formatManilaDate(board.day)}</h2>
+        <h2 className="text-[17px] font-medium">
+          {interpolate(dict.admin.orders.heading, { date: formatManilaDate(board.day) })}
+        </h2>
         <div className="flex flex-wrap gap-1.5">
           <RoutePill
-            label="Lahat ng ruta"
+            label={dict.admin.orders.allRoutes}
             active={routeFilter === null}
             onClick={() => setRouteFilter(null)}
           />
@@ -101,7 +111,7 @@ export function OrdersBoardClient() {
                 )}
                 {over && (
                   <p className="mt-1.5 text-xs font-medium text-danger">
-                    Lampas sa kaya ng truck — hatiin ang ruta o ilipat ang ibang order.
+                    {dict.admin.orders.overCapacity}
                   </p>
                 )}
               </div>
@@ -110,7 +120,7 @@ export function OrdersBoardClient() {
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {COLUMNS.map((col) => {
+        {cols.map((col) => {
           const colOrders = visibleOrders.filter((o) => o.status === col.status);
           return (
             <section key={col.status}>
@@ -121,7 +131,7 @@ export function OrdersBoardClient() {
               <div className="mt-2 flex flex-col gap-2">
                 {colOrders.length === 0 && (
                   <p className="rounded-md border border-dashed border-hair px-3 py-4 text-center text-xs text-ink-3">
-                    Wala
+                    {dict.admin.orders.emptyColumn}
                   </p>
                 )}
                 {colOrders.map((order) => (
@@ -135,7 +145,9 @@ export function OrdersBoardClient() {
 
       {cancelled.length > 0 && (
         <p className="mt-5 text-[13px] text-ink-3">
-          Kanselado ngayon: {cancelled.map((o) => o.storeName).join(", ")}
+          {interpolate(dict.admin.orders.cancelledToday, {
+            names: cancelled.map((o) => o.storeName).join(", "),
+          })}
         </p>
       )}
     </div>
@@ -161,13 +173,14 @@ function RoutePill(props: { label: string; active: boolean; onClick: () => void 
 
 function OrderCard(props: { order: BoardOrder }) {
   const { order } = props;
+  const dict = useDictionary();
   const utils = trpc.useUtils();
   const setStatus = trpc.admin.orders.setStatus.useMutation({
     onSettled() {
       void utils.admin.orders.board.invalidate();
     },
   });
-  const next = NEXT_STEP[order.status];
+  const next = nextStep(dict)[order.status];
 
   return (
     <div className="rounded-md border border-hair bg-white px-3.5 py-3">
@@ -178,8 +191,11 @@ function OrderCard(props: { order: BoardOrder }) {
         </span>
       </div>
       <div className="price mt-1 text-xs text-ink-2">
-        {order.itemCount} item · {order.loadKg.toFixed(1)} kg
-        {order.hasUnweighedItems && <span title="May item na walang timbang sa katalogo"> ±</span>}
+        {interpolate(
+          order.itemCount === 1 ? dict.admin.orders.cardMetaOne : dict.admin.orders.cardMetaOther,
+          { count: order.itemCount, kg: order.loadKg.toFixed(1) },
+        )}
+        {order.hasUnweighedItems && <span title={dict.admin.orders.unweighedTitle}> ±</span>}
       </div>
       {next && (
         <Button
@@ -189,7 +205,7 @@ function OrderCard(props: { order: BoardOrder }) {
           disabled={setStatus.isPending}
           onClick={() => setStatus.mutate({ orderId: order.id, status: next.status })}
         >
-          {setStatus.isPending ? "Sandali…" : next.label}
+          {setStatus.isPending ? dict.admin.orders.updating : next.label}
         </Button>
       )}
       {setStatus.error && (

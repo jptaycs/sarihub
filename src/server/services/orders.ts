@@ -16,6 +16,9 @@ import {
 } from "~/server/db/schema";
 import { formatManila, now } from "~/lib/datetime";
 import { cutoffInstant, nextDeliveryDate } from "~/lib/deliverySchedule";
+import { getDictionary } from "~/lib/i18n/dictionaries";
+import { interpolate } from "~/lib/i18n/interpolate";
+import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import type { PlaceOrderInput } from "~/lib/schemas/order";
 
 type Db = typeof defaultDb;
@@ -62,28 +65,22 @@ export async function placeOrder(
   db: Db,
   userId: string,
   input: PlaceOrderInput,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<PlaceOrderResult> {
+  const dict = getDictionary(locale).orders.errors;
   const submittedAt = now();
 
   const [store] = await db.select().from(stores).where(eq(stores.ownerUserId, userId)).limit(1);
   if (!store) {
-    return {
-      ok: false,
-      reason: "no_store",
-      message: "Wala pang tindahan na naka-rehistro sa account na ito. Tawagan po kami.",
-    };
+    return { ok: false, reason: "no_store", message: dict.noStore };
   }
   if (!store.routeId) {
-    return {
-      ok: false,
-      reason: "no_route",
-      message: "Wala pang ruta ang tindahan ninyo. Tawagan po kami para ma-ayos.",
-    };
+    return { ok: false, reason: "no_route", message: dict.noRoute };
   }
 
   const [route] = await db.select().from(routes).where(eq(routes.id, store.routeId)).limit(1);
   if (!route) {
-    return { ok: false, reason: "no_route", message: "Hindi mahanap ang ruta. Tawagan po kami." };
+    return { ok: false, reason: "no_route", message: dict.noRouteFound };
   }
 
   // Same unit tapped twice collapses into one line.
@@ -110,11 +107,7 @@ export async function placeOrder(
       ),
     );
   if (unitRows.length !== unitIds.length) {
-    return {
-      ok: false,
-      reason: "unknown_item",
-      message: "May item sa order na wala na sa listahan. I-refresh po ang app.",
-    };
+    return { ok: false, reason: "unknown_item", message: dict.unknownItem };
   }
 
   // Live price per unit at submission time. This row is what gets locked.
@@ -140,7 +133,7 @@ export async function placeOrder(
     return {
       ok: false,
       reason: "no_price_today",
-      message: `Walang presyo ngayon para sa: ${names}. Alisin muna po sa order.`,
+      message: interpolate(dict.noPriceToday, { names }),
     };
   }
 
@@ -176,7 +169,7 @@ export async function placeOrder(
     return {
       ok: false,
       reason: "out_of_stock",
-      message: `Naubos po ngayon: ${names}. Alisin muna po sa order.`,
+      message: interpolate(dict.outOfStock, { names }),
     };
   }
 
@@ -212,7 +205,7 @@ export async function placeOrder(
       return {
         ok: false as const,
         reason: "over_suki_limit" as const,
-        message: "Lampas na po sa suki limit ninyo ang order na ito.",
+        message: dict.overSukiLimit,
         availableCentavos: available > 0n ? available : 0n,
       };
     }
@@ -290,7 +283,9 @@ export async function cancelOrder(
   db: Db,
   userId: string,
   orderId: string,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<CancelOrderResult> {
+  const dict = getDictionary(locale).orders.errors;
   const at = now();
 
   const [store] = await db
@@ -299,7 +294,7 @@ export async function cancelOrder(
     .where(eq(stores.ownerUserId, userId))
     .limit(1);
   if (!store) {
-    return { ok: false, reason: "not_found", message: "Hindi po mahanap ang order." };
+    return { ok: false, reason: "not_found", message: dict.notFound };
   }
 
   return db.transaction(async (tx) => {
@@ -321,32 +316,24 @@ export async function cancelOrder(
     );
     const order = rows[0] && { ...rows[0], deliver_on: new Date(rows[0].deliver_on) };
     if (!order) {
-      return {
-        ok: false as const,
-        reason: "not_found" as const,
-        message: "Hindi po mahanap ang order.",
-      };
+      return { ok: false as const, reason: "not_found" as const, message: dict.notFound };
     }
     if (order.status === "cancelled") {
       return {
         ok: false as const,
         reason: "not_cancellable" as const,
-        message: "Kanselado na po ang order na ito.",
+        message: dict.alreadyCancelled,
       };
     }
     if (order.status !== "submitted") {
       return {
         ok: false as const,
         reason: "not_cancellable" as const,
-        message: "Hindi na po pwedeng kanselahin — inihahanda na ang order.",
+        message: dict.notCancellable,
       };
     }
     if (at >= cutoffInstant(order.cutoff_local, order.deliver_on)) {
-      return {
-        ok: false as const,
-        reason: "past_cutoff" as const,
-        message: "Lampas na po sa cutoff — binibili na ang paninda para sa ruta.",
-      };
+      return { ok: false as const, reason: "past_cutoff" as const, message: dict.pastCutoff };
     }
 
     const totalCentavos = BigInt(order.total_centavos);
@@ -356,7 +343,7 @@ export async function cancelOrder(
       .set({
         status: "cancelled",
         cancelledAt: at,
-        cancelledReason: "Kinansela ng tindahan bago ang cutoff",
+        cancelledReason: dict.cancelledReasonText,
       })
       .where(eq(orders.id, orderId));
 
@@ -366,7 +353,7 @@ export async function cancelOrder(
       kind: "adjustment",
       amountCentavos: -totalCentavos,
       orderId,
-      reason: "Kanseladong order",
+      reason: dict.cancelAdjustmentReason,
     });
 
     return { ok: true as const, orderId, reversedCentavos: totalCentavos };
