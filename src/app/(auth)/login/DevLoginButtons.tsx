@@ -19,7 +19,7 @@ export function DevLoginButtons() {
         Dev shortcut — hindi lalabas sa production
       </p>
       <div className="mt-3 flex gap-2">
-        <DevButton account="owner" label="Owner" action={formAction} pending={pending} />
+        <DevButton account="owner" label="Sari-Sari Owner" action={formAction} pending={pending} />
         <DevButton account="staff" label="Staff (admin)" action={formAction} pending={pending} />
       </div>
       {state?.error ? (
