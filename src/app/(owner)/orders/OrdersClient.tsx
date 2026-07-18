@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { Card } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
@@ -53,14 +54,14 @@ export function OrdersClient() {
   const statuses = statusLabel(dict);
 
   return (
-    <div>
+    <Card>
       {orders.map((order) => {
         const status = statuses[order.status] ?? statuses.draft!;
         return (
           <Link
             key={order.id}
             href={`/orders/${order.id}`}
-            className="hair-b block py-3.5 active:bg-surface-2"
+            className="hair-b block px-4 py-3.5 last:border-b-0 active:bg-surface-2"
           >
             <div className="flex items-center justify-between">
               <span className="text-[14px] font-medium">
@@ -86,6 +87,6 @@ export function OrdersClient() {
           </Link>
         );
       })}
-    </div>
+    </Card>
   );
 }

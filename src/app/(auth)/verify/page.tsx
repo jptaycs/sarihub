@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 
 import { formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
@@ -28,7 +29,7 @@ export default async function VerifyPage({
           aria-label={dict.common.back}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hair bg-white"
         >
-          <ChevronLeft />
+          <ChevronLeft size={20} strokeWidth={2} />
         </Link>
       </div>
 
@@ -49,19 +50,5 @@ export default async function VerifyPage({
         {dict.verify.helpLine} <span className="font-medium text-ink">0917-555-0188</span>
       </p>
     </main>
-  );
-}
-
-function ChevronLeft() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M15 18l-6-6 6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }

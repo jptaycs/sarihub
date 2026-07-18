@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { CircleUser } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
+import { Card, CardRow } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManila, now } from "~/lib/datetime";
 import { formatPeso, pesosToCentavos } from "~/lib/format";
@@ -43,11 +46,20 @@ export function PricesClient() {
 
   return (
     <div>
-      <header className="py-3">
-        <h1 className="text-[22px] font-medium leading-[1.15] tracking-tight">
-          {dict.buyerPrices.title}
-        </h1>
-        <p className="mt-0.5 text-[13px] text-ink-2">{formatManila(now(), "EEEE, d MMM yyyy")}</p>
+      <header className="flex items-start justify-between py-3">
+        <div>
+          <h1 className="title-large">{dict.buyerPrices.title}</h1>
+          <p className="mt-0.5 text-[13px] text-ink-2">
+            {formatManila(now(), "EEEE, d MMM yyyy")}
+          </p>
+        </div>
+        <Link
+          href="/profile"
+          aria-label={dict.nav.profileAria}
+          className="mt-1 flex h-10 w-10 items-center justify-center rounded-pill border border-hair-strong bg-white text-ink-2 active:bg-surface-2"
+        >
+          <CircleUser size={22} strokeWidth={1.75} />
+        </Link>
       </header>
 
       {unpriced.length > 0 ? (
@@ -88,16 +100,16 @@ export function PricesClient() {
 function ProductPriceGroup(props: { product: BoardProduct }) {
   const { product } = props;
   return (
-    <section className="hair-b py-3">
-      <div className="flex items-baseline gap-2">
+    <section className="py-2.5">
+      <div className="flex items-baseline gap-2 px-1">
         <span className="lbl-tag">{product.nameTl}</span>
         <span className="lbl-en">{product.nameEn}</span>
       </div>
-      <div className="mt-1">
+      <Card className="mt-1.5">
         {product.units.map((unit) => (
           <UnitPriceRow key={unit.id} nameTl={product.nameTl} unit={unit} />
         ))}
-      </div>
+      </Card>
     </section>
   );
 }
@@ -128,18 +140,18 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
 
   if (unit.outOfStockToday) {
     return (
-      <div className="flex min-h-14 items-center justify-between gap-3 py-1.5">
+      <CardRow className="flex min-h-14 items-center justify-between gap-3">
         <span className="text-[15px] text-ink-3 line-through">{unit.labelTl}</span>
         <span className="rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-danger">
           {dict.buyerPrices.outOfStockBadge}
         </span>
-      </div>
+      </CardRow>
     );
   }
 
   if (editing) {
     return (
-      <div className="py-1.5">
+      <CardRow>
         <div className="flex items-center gap-2">
           <span className="w-24 shrink-0 text-[15px]">{unit.labelTl}</span>
           <div className="flex h-14 flex-1 items-center gap-1 rounded-md border border-action bg-white px-3">
@@ -180,13 +192,13 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
         {setPrice.error && (
           <p className="mt-2 text-[13px] font-medium text-danger">{setPrice.error.message}</p>
         )}
-      </div>
+      </CardRow>
     );
   }
 
   if (confirmingOos) {
     return (
-      <div className="py-1.5">
+      <CardRow>
         <p className="text-[14px] font-medium">
           {interpolate(dict.buyerPrices.confirmOos, { name: nameTl, unit: unit.labelTl })}
         </p>
@@ -211,12 +223,12 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
         {markOos.error && (
           <p className="mt-2 text-[13px] font-medium text-danger">{markOos.error.message}</p>
         )}
-      </div>
+      </CardRow>
     );
   }
 
   return (
-    <div className="flex min-h-14 items-center justify-between gap-3 py-1.5">
+    <CardRow className="flex min-h-14 items-center justify-between gap-3">
       <div className="min-w-0">
         <div className="text-[15px]">{unit.labelTl}</div>
         {unit.previousCentavos !== null && (
@@ -256,6 +268,6 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
           {dict.buyerPrices.markOosButton}
         </button>
       </div>
-    </div>
+    </CardRow>
   );
 }

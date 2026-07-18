@@ -4,6 +4,12 @@
  * shape via `Dictionary = typeof tl`, so a missing/extra key fails the build.
  */
 export const tl = {
+  nav: {
+    home: "Home",
+    orders: "Mga Order",
+    profile: "Profile",
+    profileAria: "Buksan ang profile",
+  },
   common: {
     back: "Bumalik",
     loading: "Nilo-load po…",
@@ -171,6 +177,7 @@ export const tl = {
       suki: "Suki",
       stores: "Mga tindahan",
       prices: "Presyo",
+      profile: "Profile",
     },
     orders: {
       heading: "Padala ngayon · {date}",
@@ -287,6 +294,28 @@ export const tl = {
     title: "Walang koneksyon po",
     message:
       "Hindi kayo naka-connect sa internet. Subukan ulit kapag may signal na — nandito pa rin ang SariHub.",
+  },
+  profile: {
+    title: "Profile",
+    storeInfoHeading: "Impormasyon ng Tindahan",
+    staffInfoHeading: "Impormasyon",
+    storeName: "Pangalan ng Tindahan",
+    ownerName: "Pangalan ng May-ari",
+    mobile: "Mobile",
+    address: "Address",
+    route: "Ruta",
+    noRoute: "Walang ruta",
+    sukiHeading: "Suki Tab",
+    sukiBalance: "Balanse",
+    sukiLimit: "Limitasyon",
+    staffRole: "Papel",
+    roleAdmin: "Admin",
+    roleBuyer: "Mamimili",
+    roleDriver: "Driver",
+    languageHeading: "Wika",
+    signOut: "Mag-sign Out",
+    signingOut: "Nag-si-sign out…",
+    noStore: "Wala pang tindahan sa account na ito. Tawagan po kami para ma-setup.",
   },
 };
 

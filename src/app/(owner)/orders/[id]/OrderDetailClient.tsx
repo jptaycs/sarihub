@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "~/components/ui/Button";
+import { Card, CardRow } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManila, formatManilaDate, formatManilaTime } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
@@ -83,45 +84,47 @@ export function OrderDetailClient(props: { orderId: string }) {
           <div className="mt-1 text-ink-2">{dict.orderDetail.refunded}</div>
         </div>
       ) : (
-        <ol className="mt-3">
-          {steps.map((step, i) => {
-            const at = order[step.key];
-            const done = at != null;
-            return (
-              <li key={step.key} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <span
-                    className={cn(
-                      "mt-0.5 flex h-5 w-5 items-center justify-center rounded-pill text-[11px]",
-                      done ? "bg-success-soft text-success" : "bg-surface-2 text-ink-3",
+        <Card className="mt-3 px-4 py-3.5">
+          <ol>
+            {steps.map((step, i) => {
+              const at = order[step.key];
+              const done = at != null;
+              return (
+                <li key={step.key} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <span
+                      className={cn(
+                        "mt-0.5 flex h-5 w-5 items-center justify-center rounded-pill text-[11px]",
+                        done ? "bg-success-soft text-success" : "bg-surface-2 text-ink-3",
+                      )}
+                    >
+                      {done ? "✓" : "·"}
+                    </span>
+                    {i < steps.length - 1 && (
+                      <span className={cn("w-px flex-1", done ? "bg-success" : "bg-hair-strong")} />
                     )}
-                  >
-                    {done ? "✓" : "·"}
-                  </span>
-                  {i < steps.length - 1 && (
-                    <span className={cn("w-px flex-1", done ? "bg-success" : "bg-hair-strong")} />
-                  )}
-                </div>
-                <div className="pb-4">
-                  <div className={cn("text-[14px] font-medium", !done && "text-ink-3")}>
-                    {step.label}
                   </div>
-                  {done && (
-                    <div className="text-xs text-ink-2">
-                      {formatManila(at, "d MMM")} · {formatManilaTime(at)}
+                  <div className="pb-4">
+                    <div className={cn("text-[14px] font-medium", !done && "text-ink-3")}>
+                      {step.label}
                     </div>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                    {done && (
+                      <div className="text-xs text-ink-2">
+                        {formatManila(at, "d MMM")} · {formatManilaTime(at)}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </Card>
       )}
 
-      <h2 className="hair-t mt-2 pt-4 text-[15px] font-medium">{dict.orderDetail.itemsHeading}</h2>
-      <div className="mt-1">
+      <p className="section-label mb-2 mt-6">{dict.orderDetail.itemsHeading}</p>
+      <Card>
         {activeItems.map((item) => (
-          <div key={item.id} className="hair-b flex items-center justify-between py-2.5">
+          <CardRow key={item.id} className="flex items-center justify-between">
             <div className="min-w-0">
               <div className="text-[14px] font-medium">
                 {item.nameTl} <span className="font-normal text-ink-2">· {item.unitLabelTl}</span>
@@ -133,10 +136,10 @@ export function OrderDetailClient(props: { orderId: string }) {
             <span className="price text-[14px] font-medium">
               {formatPeso(item.lockedTotalCentavos)}
             </span>
-          </div>
+          </CardRow>
         ))}
         {cancelledItems.map((item) => (
-          <div key={item.id} className="hair-b flex items-center justify-between py-2.5">
+          <CardRow key={item.id} className="flex items-center justify-between">
             <div className="min-w-0">
               <div className="text-[14px] text-ink-3 line-through">
                 {item.nameTl} · {item.unitLabelTl} ×{item.quantity}
@@ -146,9 +149,9 @@ export function OrderDetailClient(props: { orderId: string }) {
             <span className="price text-[14px] text-ink-3 line-through">
               {formatPeso(item.lockedTotalCentavos)}
             </span>
-          </div>
+          </CardRow>
         ))}
-      </div>
+      </Card>
 
       <div className="flex items-center justify-between py-3">
         <span className="text-[14px] text-ink-2">{dict.common.sukiTotalLabel}</span>

@@ -1,9 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
+import { CircleUser } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
+import { Card } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso, formatPhone } from "~/lib/format";
@@ -39,11 +42,18 @@ export function DriverClient() {
 
   return (
     <div>
-      <header className="py-3">
-        <h1 className="text-[22px] font-medium leading-[1.15] tracking-tight">
-          {dict.driver.title}
-        </h1>
-        <p className="mt-0.5 text-[13px] text-ink-2">{formatManilaDate(day)}</p>
+      <header className="flex items-start justify-between py-3">
+        <div>
+          <h1 className="title-large">{dict.driver.title}</h1>
+          <p className="mt-0.5 text-[13px] text-ink-2">{formatManilaDate(day)}</p>
+        </div>
+        <Link
+          href="/profile"
+          aria-label={dict.nav.profileAria}
+          className="mt-1 flex h-10 w-10 items-center justify-center rounded-pill border border-hair-strong bg-white text-ink-2 active:bg-surface-2"
+        >
+          <CircleUser size={22} strokeWidth={1.75} />
+        </Link>
       </header>
 
       {routes.length > 1 && (
@@ -101,7 +111,7 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between rounded-md bg-surface-2 px-3.5 py-2.5 text-[13px]">
+      <div className="mb-3 flex items-center justify-between rounded-md bg-surface-2 px-3.5 py-2.5 text-[13px]">
         <span className="text-ink-2">
           {route?.name}
           {route?.vehiclePlate ? ` · ${route.vehiclePlate}` : ""}
@@ -125,7 +135,7 @@ function StopCard(props: { stop: Stop; index: number }) {
   const activeItems = stop.items.filter((i) => !i.cancelledItem);
 
   return (
-    <div className={cn("hair-b py-3.5", done && "opacity-60")}>
+    <Card className={cn("mb-3 px-4 py-3.5", done && "opacity-60")}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2">
@@ -169,7 +179,7 @@ function StopCard(props: { stop: Stop; index: number }) {
       )}
 
       {confirming && <PodSheet stop={stop} onClose={() => setConfirming(false)} />}
-    </div>
+    </Card>
   );
 }
 

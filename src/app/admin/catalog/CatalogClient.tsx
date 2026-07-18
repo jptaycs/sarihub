@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
+import { Card } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
@@ -42,7 +43,7 @@ export function CatalogClient() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="text-[17px] font-medium">{dict.admin.catalog.title}</h2>
+        <h2 className="title-large">{dict.admin.catalog.title}</h2>
         {!creating && (
           <Button onClick={() => setCreating(true)}>{dict.admin.catalog.newProduct}</Button>
         )}
@@ -72,7 +73,7 @@ function ProductRow(props: { product: CatalogProduct }) {
   const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
 
   return (
-    <div className={cn("hair-b py-3.5", !product.isActive && "opacity-60")}>
+    <Card className={cn("mb-3 px-4 py-3.5", !product.isActive && "opacity-60")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-baseline gap-2">
           <span className="lbl-tag">{product.nameTl}</span>
@@ -153,7 +154,7 @@ function ProductRow(props: { product: CatalogProduct }) {
           ),
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 

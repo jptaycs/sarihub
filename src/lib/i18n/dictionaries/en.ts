@@ -1,6 +1,12 @@
 import type { Dictionary } from "./tl";
 
 export const en: Dictionary = {
+  nav: {
+    home: "Home",
+    orders: "Orders",
+    profile: "Profile",
+    profileAria: "Open profile",
+  },
   common: {
     back: "Back",
     loading: "Loading…",
@@ -168,6 +174,7 @@ export const en: Dictionary = {
       suki: "Suki",
       stores: "Stores",
       prices: "Prices",
+      profile: "Profile",
     },
     orders: {
       heading: "Today's dispatch · {date}",
@@ -284,5 +291,27 @@ export const en: Dictionary = {
     title: "No connection",
     message:
       "You're not connected to the internet. Try again once you have signal — SariHub will still be here.",
+  },
+  profile: {
+    title: "Profile",
+    storeInfoHeading: "Store Information",
+    staffInfoHeading: "Information",
+    storeName: "Store Name",
+    ownerName: "Owner's Name",
+    mobile: "Mobile",
+    address: "Address",
+    route: "Route",
+    noRoute: "No route",
+    sukiHeading: "Suki Tab",
+    sukiBalance: "Balance",
+    sukiLimit: "Limit",
+    staffRole: "Role",
+    roleAdmin: "Admin",
+    roleBuyer: "Buyer",
+    roleDriver: "Driver",
+    languageHeading: "Language",
+    signOut: "Sign Out",
+    signingOut: "Signing out…",
+    noStore: "This account has no store yet. Please call us to set it up.",
   },
 };

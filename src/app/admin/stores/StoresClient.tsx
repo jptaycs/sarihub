@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
+import { Card, CardRow } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import { formatPeso, formatPhone, pesosToCentavos } from "~/lib/format";
@@ -45,7 +46,7 @@ export function StoresClient() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="text-[17px] font-medium">{dict.admin.stores.title}</h2>
+        <h2 className="title-large">{dict.admin.stores.title}</h2>
         {!creating && (
           <Button onClick={() => setCreating(true)}>{dict.admin.stores.newStore}</Button>
         )}
@@ -59,14 +60,15 @@ export function StoresClient() {
         </div>
       )}
 
-      <div className="mt-3">
-        {storesQuery.data.map((store) => (
-          <StoreRow key={store.id} store={store} routes={routes} />
-        ))}
-        {storesQuery.data.length === 0 && (
-          <p className="pt-8 text-center text-[13px] text-ink-2">{dict.admin.stores.empty}</p>
-        )}
-      </div>
+      {storesQuery.data.length > 0 ? (
+        <Card className="mt-3">
+          {storesQuery.data.map((store) => (
+            <StoreRow key={store.id} store={store} routes={routes} />
+          ))}
+        </Card>
+      ) : (
+        <p className="pt-8 text-center text-[13px] text-ink-2">{dict.admin.stores.empty}</p>
+      )}
     </div>
   );
 }
@@ -77,7 +79,7 @@ function StoreRow(props: { store: StoreRowData; routes: Array<{ id: string; name
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="hair-b py-3">
+    <CardRow>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="min-w-0">
           <span className="text-[14px] font-medium">{store.name}</span>
@@ -111,7 +113,7 @@ function StoreRow(props: { store: StoreRowData; routes: Array<{ id: string; name
           <UpdateStoreForm store={store} routes={props.routes} onDone={() => setEditing(false)} />
         </div>
       )}
-    </div>
+    </CardRow>
   );
 }
 

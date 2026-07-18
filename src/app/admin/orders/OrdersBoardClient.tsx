@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
+import { Card } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
@@ -63,7 +64,7 @@ export function OrdersBoardClient() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[17px] font-medium">
+        <h2 className="title-large">
           {interpolate(dict.admin.orders.heading, { date: formatManilaDate(board.day) })}
         </h2>
         <div className="flex flex-wrap gap-1.5">
@@ -93,7 +94,7 @@ export function OrdersBoardClient() {
                 ? Math.min((route.loadKg / route.capacityKg) * 100, 100)
                 : 0;
             return (
-              <div key={route.id} className="rounded-md border border-hair bg-white px-3.5 py-3">
+              <Card key={route.id} className="px-3.5 py-3">
                 <div className="flex items-baseline justify-between">
                   <span className="text-[14px] font-medium">{route.name}</span>
                   <span className={cn("price text-[13px]", over ? "font-semibold text-danger" : "text-ink-2")}>
@@ -114,7 +115,7 @@ export function OrdersBoardClient() {
                     {dict.admin.orders.overCapacity}
                   </p>
                 )}
-              </div>
+              </Card>
             );
           })}
       </div>
@@ -183,7 +184,7 @@ function OrderCard(props: { order: BoardOrder }) {
   const next = nextStep(dict)[order.status];
 
   return (
-    <div className="rounded-md border border-hair bg-white px-3.5 py-3">
+    <Card className="px-3.5 py-3">
       <div className="flex items-baseline justify-between gap-2">
         <span className="min-w-0 truncate text-[14px] font-medium">{order.storeName}</span>
         <span className="price shrink-0 text-[14px] font-medium">
@@ -211,6 +212,6 @@ function OrderCard(props: { order: BoardOrder }) {
       {setStatus.error && (
         <p className="mt-1.5 text-xs font-medium text-danger">{setStatus.error.message}</p>
       )}
-    </div>
+    </Card>
   );
 }

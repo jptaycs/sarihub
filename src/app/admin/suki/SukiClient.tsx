@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
+import { Card, CardRow } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import { formatManila } from "~/lib/datetime";
@@ -35,26 +36,27 @@ export function SukiClient() {
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[17px] font-medium">{dict.admin.suki.title}</h2>
+        <h2 className="title-large">{dict.admin.suki.title}</h2>
         <p className="text-[14px] text-ink-2">
           {dict.admin.suki.totalOutstanding}{" "}
           <span className="price font-semibold text-ink">{formatPeso(totalOutstanding)}</span>
         </p>
       </div>
 
-      <div className="mt-3">
-        {stores.map((store) => (
-          <StoreRow
-            key={store.id}
-            store={store}
-            open={openStoreId === store.id}
-            onToggle={() => setOpenStoreId(openStoreId === store.id ? null : store.id)}
-          />
-        ))}
-        {stores.length === 0 && (
-          <p className="pt-8 text-center text-[13px] text-ink-2">{dict.admin.suki.empty}</p>
-        )}
-      </div>
+      {stores.length > 0 ? (
+        <Card className="mt-3">
+          {stores.map((store) => (
+            <StoreRow
+              key={store.id}
+              store={store}
+              open={openStoreId === store.id}
+              onToggle={() => setOpenStoreId(openStoreId === store.id ? null : store.id)}
+            />
+          ))}
+        </Card>
+      ) : (
+        <p className="pt-8 text-center text-[13px] text-ink-2">{dict.admin.suki.empty}</p>
+      )}
     </div>
   );
 }
@@ -68,7 +70,7 @@ function StoreRow(props: { store: ExposureStore; open: boolean; onToggle: () => 
   const nearLimit = limit > 0n && balance * 100n >= limit * 80n;
 
   return (
-    <div className="hair-b py-3">
+    <CardRow>
       <button type="button" onClick={props.onToggle} className="block w-full text-left">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className="flex items-baseline gap-2">
@@ -94,7 +96,7 @@ function StoreRow(props: { store: ExposureStore; open: boolean; onToggle: () => 
       </button>
 
       {open && <StoreLedgerPanel storeId={store.id} />}
-    </div>
+    </CardRow>
   );
 }
 

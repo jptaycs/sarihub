@@ -6,7 +6,7 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success" | 
 type ButtonSize = "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-md font-medium tracking-tight whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50 select-none";
+  "inline-flex items-center justify-center gap-2 rounded-md font-medium tracking-tight whitespace-nowrap transition-[background-color,transform] duration-150 ease-[var(--ease-spring)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 select-none";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-action text-white active:bg-action-press",
