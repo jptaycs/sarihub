@@ -15,6 +15,16 @@ async function readSukiBalance(page: Page): Promise<number> {
   return pesoTextToNumber(priceText ?? "");
 }
 
+/** Sets today's price for Sibuyas · 1 kilo on the buyer price board and waits for it to save. */
+async function setSibuyasKiloPrice(page: Page, pesos: string): Promise<void> {
+  const oosButton = page.getByRole("button", { name: "Markahang ubos ang Sibuyas 1 kilo" });
+  const priceButton = oosButton.locator("xpath=preceding-sibling::button[1]");
+  await priceButton.click();
+  await page.getByLabel("Presyo ng Sibuyas 1 kilo").fill(pesos);
+  await page.getByRole("button", { name: "I-save" }).click();
+  await expect(priceButton).toContainText(`₱${pesos}`);
+}
+
 test("money path: price lock survives a price change", async ({ browser }) => {
   const ownerContext = await browser.newContext();
   const staffContext = await browser.newContext();
@@ -34,6 +44,21 @@ test("money path: price lock survives a price change", async ({ browser }) => {
     await staffPage.waitForURL("**/admin/orders");
     await staffPage.goto("/buyer/prices");
     await expect(staffPage.getByRole("heading", { name: "Presyo ngayon" })).toBeVisible();
+  });
+
+  let baselineBalance = 0;
+
+  await test.step("staff sets today's price for Sibuyas · 1 kilo", async () => {
+    await setSibuyasKiloPrice(staffPage, "161.00");
+  });
+
+  await test.step("owner sees the new price and baseline suki balance", async () => {
+    await ownerPage.goto("/home");
+    baselineBalance = await readSukiBalance(ownerPage);
+    // The unfiltered catalog shows a "1 kilo" unit for several products
+    // (Sibuyas, Kamatis, Galunggong, Asukal) — narrow to Sibuyas first.
+    await ownerPage.getByPlaceholder(/Hanapin/i).fill("sibuyas");
+    await expect(ownerPage.getByRole("button", { name: /^1 kilo/ })).toContainText("₱161.00");
   });
 
   await ownerContext.close();
