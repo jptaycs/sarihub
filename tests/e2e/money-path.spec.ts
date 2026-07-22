@@ -102,6 +102,17 @@ test("money path: price lock survives a price change", async ({ browser }) => {
     await expect(ownerPage.getByRole("button", { name: /^1 kilo/ })).toContainText("₱179.00");
   });
 
+  await test.step("owner cancels the order (cleanup) and balance reverts", async () => {
+    await ownerPage.goto(orderUrl);
+    await ownerPage.getByRole("button", { name: "Kanselahin ang order" }).click();
+    await ownerPage.getByRole("button", { name: "Oo, ikansela" }).click();
+    await expect(ownerPage.getByText("Kanselado na po ang order na ito.")).toBeVisible();
+
+    await ownerPage.goto("/home");
+    const finalBalance = await readSukiBalance(ownerPage);
+    expect(finalBalance).toBeCloseTo(baselineBalance, 2);
+  });
+
   await ownerContext.close();
   await staffContext.close();
 });

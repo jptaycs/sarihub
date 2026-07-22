@@ -105,7 +105,7 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] PWA: manifest + SVG icon, `public/sw.js` (network-first navigations with cached-shell fallback, cache-first static assets, `/api` and `/auth` never cached), `/offline` fallback page
 - [x] RLS audit for staff roles: staff-wide SELECT policies on stores/orders/items/ledger/prices/catalog via `is_active_staff()` (0003 RLS SQL); writes stay server-side
 - [x] Bilingual UI (Tagalog/English): switcher on `/login`, `src/lib/i18n/` dictionaries covering every screen plus server-emitted tRPC/Server Action messages, verified live that the same request returns the right language purely off the `sarihub_lang` cookie. See the i18n paragraph above for the required pattern on new strings.
-- [ ] Playwright e2e for the money path: login → order → price lock survives a next-day price change (needs the live project)
+- [x] Playwright e2e for the money path: login → order → price lock survives a next-day price change (needs the live project)
 - [ ] Payments via PayMongo (explicitly later — suki tab is the MVP payment method)
 
 ### Deferred from the bilingual UI work (low priority, not blocking anything)
