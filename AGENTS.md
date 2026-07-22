@@ -109,6 +109,11 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [ ] Payments via PayMongo (explicitly later — suki tab is the MVP payment method)
 
 ### Deferred from the bilingual UI work (low priority, not blocking anything)
-- [ ] A language switcher reachable after login (currently only on `/login`; the choice persists via cookie but there's no in-app way to change it once signed in)
+- [x] A language switcher reachable after login — shipped as part of the
+  Apple/SwiftUI redesign's `/profile` page (07fd1cd), reachable from every
+  role's nav (owner tab bar, admin sidebar, buyer/driver header). Verified
+  live: switching on `/profile` re-renders server-rendered chrome and
+  catalog copy immediately and persists across navigation and across owner
+  and staff sessions via the `sarihub_lang` cookie.
 - [ ] Translate DB-sourced free text (`products.category` values like `gulay`/`itlog`; store/owner/route names are inherently proper nouns and shouldn't be) — would need either a bilingual category column or a lookup table
 - [ ] Real Filipino/Tagalog date formatting — `date-fns` ships no `fil` locale; dates have always rendered in English (`Mon, 13 Jul`) regardless of surrounding copy, pre-dating the language toggle. Would need a hand-rolled `date-fns` `Locale` object (day/month names, formatLong, ordinal rules)
