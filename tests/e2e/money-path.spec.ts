@@ -25,7 +25,7 @@ async function setSibuyasKiloPrice(page: Page, pesos: string): Promise<void> {
   await expect(priceButton).toContainText(`₱${pesos}`);
 }
 
-test("money path: price lock survives a price change", async ({ browser }) => {
+test("money path: price lock survives a price change, suki ledger round-trips on place/cancel", async ({ browser }) => {
   const ownerContext = await browser.newContext();
   const staffContext = await browser.newContext();
   const ownerPage = await ownerContext.newPage();
