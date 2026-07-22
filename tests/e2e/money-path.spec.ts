@@ -86,6 +86,22 @@ test("money path: price lock survives a price change", async ({ browser }) => {
     expect(afterPlaceBalance).toBeCloseTo(baselineBalance + 161.0, 2);
   });
 
+  await test.step("staff changes today's price again", async () => {
+    await setSibuyasKiloPrice(staffPage, "179.00");
+  });
+
+  await test.step("order detail still shows the locked price, not the new one", async () => {
+    await ownerPage.goto(orderUrl);
+    await expect(ownerPage.getByText("1 × ₱161.00", { exact: true })).toBeVisible();
+    await expect(ownerPage.getByText("1 × ₱179.00", { exact: true })).toHaveCount(0);
+  });
+
+  await test.step("catalog now shows the new price going forward", async () => {
+    await ownerPage.goto("/home");
+    await ownerPage.getByPlaceholder(/Hanapin/i).fill("sibuyas");
+    await expect(ownerPage.getByRole("button", { name: /^1 kilo/ })).toContainText("₱179.00");
+  });
+
   await ownerContext.close();
   await staffContext.close();
 });
