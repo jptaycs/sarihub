@@ -61,6 +61,31 @@ test("money path: price lock survives a price change", async ({ browser }) => {
     await expect(ownerPage.getByRole("button", { name: /^1 kilo/ })).toContainText("₱161.00");
   });
 
+  let orderUrl = "";
+
+  await test.step("owner adds the unit and places the order", async () => {
+    await ownerPage.getByRole("button", { name: /^1 kilo/ }).click();
+    await ownerPage.getByRole("button", { name: /Tingnan ang order/ }).click();
+    await expect(ownerPage.getByRole("heading", { name: "Ang order ninyo" })).toBeVisible();
+    await ownerPage.getByRole("button", { name: /I-place ang order/ }).click();
+    await expect(ownerPage.getByRole("heading", { name: "Naipasa na po ang order!" })).toBeVisible();
+    await ownerPage.getByRole("link", { name: /Tingnan ang mga order/ }).click();
+    await ownerPage.waitForURL("**/orders");
+  });
+
+  await test.step("owner opens the fresh order and checks the locked price", async () => {
+    await ownerPage.locator('a[href^="/orders/"]').first().click();
+    await ownerPage.waitForURL(/\/orders\/.+/);
+    orderUrl = ownerPage.url();
+    await expect(ownerPage.getByText("1 × ₱161.00", { exact: true })).toBeVisible();
+  });
+
+  await test.step("suki balance increased by the order total", async () => {
+    await ownerPage.goto("/home");
+    const afterPlaceBalance = await readSukiBalance(ownerPage);
+    expect(afterPlaceBalance).toBeCloseTo(baselineBalance + 161.0, 2);
+  });
+
   await ownerContext.close();
   await staffContext.close();
 });
