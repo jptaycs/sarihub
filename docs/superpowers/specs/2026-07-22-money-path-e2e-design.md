@@ -76,3 +76,10 @@ No new seed data, migrations, or fixtures. Uses the existing seeded product
   seed row continuing to exist. If the live project's seed or dev accounts
   ever change, this test needs updating alongside `devLoginAction.ts`'s
   existing comment about keeping the two pairs in sync.
+- No `try`/`finally` around the cancel step: if an assertion fails between
+  placing the order and cancelling it, the run aborts with a real submitted
+  order and a shifted suki balance left on the shared dev store. The balance
+  self-heals on the next run (baseline is re-captured each time), but the
+  orphaned order needs manual cleanup. Acceptable for a manually-run local
+  e2e test; revisit with a `try`/`finally` cancel if this is ever promoted
+  to unattended CI.

@@ -4,7 +4,7 @@ test("login page renders Tagalog headline + phone entry", async ({ page }) => {
   await page.goto("/login");
 
   await expect(page.getByRole("heading", { name: /Magpasok po ng/i })).toBeVisible();
-  await expect(page.getByLabel(/Mobile number/i)).toBeVisible();
+  await expect(page.getByLabel(/Numero ng mobile/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /Magpadala ng code/i })).toBeVisible();
 
   // 48px minimum tap height on the CTA.
