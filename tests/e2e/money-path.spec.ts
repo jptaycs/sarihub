@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 function pesoTextToNumber(text: string): number {
   const match = /₱([\d,]+\.\d{2})/.exec(text);
   if (!match) throw new Error(`no peso amount found in "${text}"`);
-  return Number(match[1].replace(/,/g, ""));
+  return Number((match[1] ?? "").replace(/,/g, ""));
 }
 
 /** Reads the suki balance pill on the owner's /home ("Suki tab" row). */
