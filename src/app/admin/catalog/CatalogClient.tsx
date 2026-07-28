@@ -78,7 +78,7 @@ function ProductRow(props: { product: CatalogProduct }) {
         <div className="flex items-baseline gap-2">
           <span className="lbl-tag">{product.nameTl}</span>
           <span className="lbl-en">{product.nameEn}</span>
-          <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs capitalize text-ink-2">
+          <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs text-ink-2">
             {dict.productCategories[product.category]}
           </span>
           <span className="text-xs text-ink-3">

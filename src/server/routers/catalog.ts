@@ -4,7 +4,14 @@ import { and, asc, desc, eq, gt, inArray, lte } from "drizzle-orm";
 
 import { formatManila, now } from "~/lib/datetime";
 import { nextDeliveryDate } from "~/lib/deliverySchedule";
-import { dailyPrices, productUnits, products, routes, stores, type ProductCategory } from "~/server/db/schema";
+import {
+  dailyPrices,
+  productUnits,
+  products,
+  routes,
+  stores,
+  type ProductCategory,
+} from "~/server/db/schema";
 import { stockoutsForDay } from "~/server/services/stockouts";
 import { protectedProcedure, router } from "~/server/trpc/init";
 

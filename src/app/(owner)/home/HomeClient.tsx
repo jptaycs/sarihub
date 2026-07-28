@@ -15,6 +15,7 @@ import { interpolate } from "~/lib/i18n/interpolate";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { trpc } from "~/lib/trpc/client";
 import { useCart } from "~/lib/useCart";
+import type { ProductCategory } from "~/server/db/schema";
 import type { AppRouter } from "~/server/trpc/root";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -46,7 +47,7 @@ export function HomeClient() {
   const { cart, setQuantity, clear } = useCart();
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
+  const [category, setCategory] = useState<ProductCategory | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const products = useMemo(() => catalogQuery.data?.products ?? [], [catalogQuery.data]);
@@ -219,7 +220,7 @@ function CategoryPill(props: { label: string; active: boolean; onClick: () => vo
       type="button"
       onClick={props.onClick}
       className={cn(
-        "h-9 shrink-0 rounded-pill border px-3.5 text-[13px] font-medium capitalize transition-colors",
+        "h-9 shrink-0 rounded-pill border px-3.5 text-[13px] font-medium transition-colors",
         props.active
           ? "border-action bg-action text-white"
           : "border-hair-strong bg-white text-ink-2 active:bg-surface-2",
