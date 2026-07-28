@@ -314,4 +314,10 @@ export const en: Dictionary = {
     signingOut: "Signing out…",
     noStore: "This account has no store yet. Please call us to set it up.",
   },
+  productCategories: {
+    gulay: "Vegetables",
+    itlog: "Eggs",
+    isda: "Fish",
+    kusina: "Kitchen essentials",
+  },
 };

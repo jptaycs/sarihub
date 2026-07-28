@@ -4,7 +4,7 @@ import { and, asc, desc, eq, gt, inArray, lte } from "drizzle-orm";
 
 import { formatManila, now } from "~/lib/datetime";
 import { nextDeliveryDate } from "~/lib/deliverySchedule";
-import { dailyPrices, productUnits, products, routes, stores } from "~/server/db/schema";
+import { dailyPrices, productUnits, products, routes, stores, type ProductCategory } from "~/server/db/schema";
 import { stockoutsForDay } from "~/server/services/stockouts";
 import { protectedProcedure, router } from "~/server/trpc/init";
 
@@ -79,7 +79,7 @@ export const catalogRouter = router({
       id: string;
       nameTl: string;
       nameEn: string;
-      category: string;
+      category: ProductCategory;
       isPerishable: boolean;
       units: UnitOut[];
     };

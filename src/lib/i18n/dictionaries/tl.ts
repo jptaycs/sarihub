@@ -317,6 +317,12 @@ export const tl = {
     signingOut: "Nag-si-sign out…",
     noStore: "Wala pang tindahan sa account na ito. Tawagan po kami para ma-setup.",
   },
+  productCategories: {
+    gulay: "Gulay",
+    itlog: "Itlog",
+    isda: "Isda",
+    kusina: "Kusina",
+  },
 };
 
 export type Dictionary = typeof tl;

@@ -163,7 +163,7 @@ export function HomeClient() {
         {categories.map((c) => (
           <CategoryPill
             key={c}
-            label={c}
+            label={dict.productCategories[c]}
             active={category === c}
             onClick={() => setCategory(category === c ? null : c)}
           />

@@ -7,7 +7,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { formatManila, now } from "~/lib/datetime";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { markOutOfStockInput, setPriceInput } from "~/lib/schemas/price";
-import { dailyPrices, productUnits, products } from "~/server/db/schema";
+import { dailyPrices, productUnits, products, type ProductCategory } from "~/server/db/schema";
 import { markUnitOutOfStock, stockoutsForDay } from "~/server/services/stockouts";
 import { buyerProcedure, router, staffProcedure } from "~/server/trpc/init";
 
@@ -90,7 +90,7 @@ export const buyerRouter = router({
       id: string;
       nameTl: string;
       nameEn: string;
-      category: string;
+      category: ProductCategory;
       units: UnitOut[];
     };
 

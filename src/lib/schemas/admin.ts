@@ -16,7 +16,7 @@ export const upsertProductInput = z.object({
   id: z.string().uuid().optional(),
   nameTl: z.string().trim().min(1, "Kailangan ang pangalan.").max(120),
   nameEn: z.string().trim().min(1, "Kailangan ang English name.").max(120),
-  category: z.string().trim().min(1, "Kailangan ang kategorya.").max(48),
+  category: z.enum(["gulay", "itlog", "isda", "kusina"]),
   isPerishable: z.boolean(),
   source: z.enum(["palengke", "warehouse"]),
   isActive: z.boolean(),

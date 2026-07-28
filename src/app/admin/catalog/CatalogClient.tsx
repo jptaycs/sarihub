@@ -79,7 +79,7 @@ function ProductRow(props: { product: CatalogProduct }) {
           <span className="lbl-tag">{product.nameTl}</span>
           <span className="lbl-en">{product.nameEn}</span>
           <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs capitalize text-ink-2">
-            {product.category}
+            {dict.productCategories[product.category]}
           </span>
           <span className="text-xs text-ink-3">
             {product.source === "palengke"
@@ -181,7 +181,7 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
           source: product.source,
           isActive: product.isActive,
         }
-      : { isPerishable: false, source: "palengke", isActive: true },
+      : { isPerishable: false, source: "palengke", category: "gulay", isActive: true },
   });
 
   return (
@@ -196,7 +196,15 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
         <Input {...form.register("nameEn")} placeholder="Red onion" />
       </Field>
       <Field label={dict.admin.catalog.category} error={form.formState.errors.category?.message}>
-        <Input {...form.register("category")} placeholder="gulay" />
+        <select
+          {...form.register("category")}
+          className="h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px]"
+        >
+          <option value="gulay">{dict.productCategories.gulay}</option>
+          <option value="itlog">{dict.productCategories.itlog}</option>
+          <option value="isda">{dict.productCategories.isda}</option>
+          <option value="kusina">{dict.productCategories.kusina}</option>
+        </select>
       </Field>
       <Field label={dict.admin.catalog.source}>
         <select
