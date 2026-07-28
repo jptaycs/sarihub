@@ -115,5 +115,5 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
   live: switching on `/profile` re-renders server-rendered chrome and
   catalog copy immediately and persists across navigation and across owner
   and staff sessions via the `sarihub_lang` cookie.
-- [ ] Translate DB-sourced free text (`products.category` values like `gulay`/`itlog`; store/owner/route names are inherently proper nouns and shouldn't be) — would need either a bilingual category column or a lookup table
+- [x] Translate DB-sourced free text: `products.category` converted to a real Postgres enum (mirroring `products.source`) with bilingual dictionary labels (`productCategories` in `src/lib/i18n/dictionaries/`). Store/owner/route names remain untranslated by design (proper nouns).
 - [ ] Real Filipino/Tagalog date formatting — `date-fns` ships no `fil` locale; dates have always rendered in English (`Mon, 13 Jul`) regardless of surrounding copy, pre-dating the language toggle. Would need a hand-rolled `date-fns` `Locale` object (day/month names, formatLong, ordinal rules)
