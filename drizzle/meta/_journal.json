@@ -29,6 +29,13 @@
       "when": 1784287472004,
       "tag": "0003_medical_korath",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785175683382,
+      "tag": "0004_glorious_blue_blade",
+      "breakpoints": true
     }
   ]
 }

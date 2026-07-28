@@ -15,6 +15,7 @@ import {
 import { centavos, idColumn, timestampColumns } from "./_shared";
 
 export const productSource = pgEnum("product_source", ["palengke", "warehouse"]);
+export const productCategory = pgEnum("product_category", ["gulay", "itlog", "isda", "kusina"]);
 
 export const products = pgTable(
   "products",
@@ -22,7 +23,7 @@ export const products = pgTable(
     id: idColumn(),
     nameTl: varchar("name_tl", { length: 120 }).notNull(),
     nameEn: varchar("name_en", { length: 120 }).notNull(),
-    category: varchar("category", { length: 48 }).notNull(),
+    category: productCategory("category").notNull(),
     isPerishable: boolean("is_perishable").notNull().default(false),
     source: productSource("source").notNull().default("palengke"),
     isActive: boolean("is_active").notNull().default(true),
@@ -33,6 +34,7 @@ export const products = pgTable(
 
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
+export type ProductCategory = (typeof productCategory.enumValues)[number];
 
 export const productUnits = pgTable(
   "product_units",
