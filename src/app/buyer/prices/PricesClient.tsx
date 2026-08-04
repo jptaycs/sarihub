@@ -29,6 +29,7 @@ export function PricesClient() {
       void utils.buyer.priceBoard.invalidate();
     },
   });
+  const [adjusting, setAdjusting] = useState(false);
 
   if (boardQuery.isLoading) {
     return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
@@ -43,6 +44,7 @@ export function PricesClient() {
   const allUnits = board.products.flatMap((p) => p.units);
   const unpriced = allUnits.filter((u) => u.todayCentavos === null && !u.outOfStockToday);
   const carryable = unpriced.filter((u) => u.previousCentavos !== null);
+  const pricedCount = allUnits.filter((u) => u.todayCentavos !== null).length;
 
   return (
     <div>
@@ -90,9 +92,153 @@ export function PricesClient() {
         <p className="mb-3 text-[13px] font-medium text-danger">{carryOver.error.message}</p>
       )}
 
+      {!adjusting && (
+        <Button variant="secondary" block className="mb-3" onClick={() => setAdjusting(true)}>
+          {dict.buyerPrices.bulkAdjustButton}
+        </Button>
+      )}
+      {adjusting && (
+        <BulkAdjustPanel pricedCount={pricedCount} onDone={() => setAdjusting(false)} />
+      )}
+
       {board.products.map((product) => (
         <ProductPriceGroup key={product.id} product={product} />
       ))}
+    </div>
+  );
+}
+
+function BulkAdjustPanel(props: { pricedCount: number; onDone: () => void }) {
+  const dict = useDictionary();
+  const utils = trpc.useUtils();
+  const [mode, setMode] = useState<"percent" | "fixed">("percent");
+  const [direction, setDirection] = useState<"up" | "down">("up");
+  const [rawValue, setRawValue] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  const bulkAdjust = trpc.buyer.bulkAdjustPrices.useMutation({
+    onSuccess() {
+      setConfirming(false);
+      void utils.buyer.priceBoard.invalidate();
+    },
+  });
+
+  const value = mode === "percent" ? Number(rawValue) : pesosToCentavos(rawValue);
+  const canSubmit =
+    mode === "percent"
+      ? Number.isFinite(value) && (value as number) > 0 && (value as number) <= 100
+      : typeof value === "number" && value > 0;
+
+  if (bulkAdjust.data) {
+    return (
+      <div className="mb-3 rounded-md bg-success-soft px-3.5 py-3 text-[13px] font-medium text-success">
+        {interpolate(dict.buyerPrices.bulkAdjust.resultSummary, { adjusted: bulkAdjust.data.adjusted })}
+        <Button variant="secondary" block className="mt-2.5" onClick={props.onDone}>
+          {dict.buyerPrices.bulkAdjust.cancel}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3 rounded-md border border-hair bg-white px-4 py-3.5">
+      <h3 className="text-[14px] font-medium">{dict.buyerPrices.bulkAdjust.heading}</h3>
+
+      <div className="mt-2.5 flex gap-2">
+        <Button
+          variant={mode === "percent" ? "primary" : "secondary"}
+          className="flex-1"
+          onClick={() => setMode("percent")}
+        >
+          {dict.buyerPrices.bulkAdjust.modePercent}
+        </Button>
+        <Button
+          variant={mode === "fixed" ? "primary" : "secondary"}
+          className="flex-1"
+          onClick={() => setMode("fixed")}
+        >
+          {dict.buyerPrices.bulkAdjust.modeFixed}
+        </Button>
+      </div>
+
+      <div className="mt-2 flex gap-2">
+        <Button
+          variant={direction === "up" ? "primary" : "secondary"}
+          className="flex-1"
+          onClick={() => setDirection("up")}
+        >
+          {dict.buyerPrices.bulkAdjust.directionUp}
+        </Button>
+        <Button
+          variant={direction === "down" ? "primary" : "secondary"}
+          className="flex-1"
+          onClick={() => setDirection("down")}
+        >
+          {dict.buyerPrices.bulkAdjust.directionDown}
+        </Button>
+      </div>
+
+      <label className="mt-2.5 block text-[13px] text-ink-2">
+        {dict.buyerPrices.bulkAdjust.valueLabel}
+        <input
+          inputMode="decimal"
+          value={rawValue}
+          onChange={(e) => setRawValue(e.target.value)}
+          placeholder={
+            mode === "percent"
+              ? dict.buyerPrices.bulkAdjust.valuePlaceholderPercent
+              : dict.buyerPrices.bulkAdjust.valuePlaceholderFixed
+          }
+          className="mt-1 h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px]"
+        />
+      </label>
+
+      {canSubmit && (
+        <p className="mt-2 text-[13px] text-ink-2">
+          {interpolate(dict.buyerPrices.bulkAdjust.affectedCount, { count: props.pricedCount })}
+        </p>
+      )}
+
+      {!confirming ? (
+        <div className="mt-3 flex gap-2">
+          <Button variant="secondary" block onClick={props.onDone}>
+            {dict.buyerPrices.bulkAdjust.cancel}
+          </Button>
+          <Button block disabled={!canSubmit} onClick={() => setConfirming(true)}>
+            {dict.buyerPrices.bulkAdjust.submit}
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-3 rounded-md bg-warning-soft px-3 py-2.5">
+          <p className="text-[13px] font-medium text-warning">
+            {interpolate(dict.buyerPrices.bulkAdjust.confirmPrompt, { count: props.pricedCount })}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="secondary"
+              block
+              disabled={bulkAdjust.isPending}
+              onClick={() => setConfirming(false)}
+            >
+              {dict.buyerPrices.bulkAdjust.confirmNo}
+            </Button>
+            <Button
+              block
+              disabled={bulkAdjust.isPending || !canSubmit}
+              onClick={() => {
+                if (!canSubmit) return;
+                bulkAdjust.mutate({ mode, direction, value: value as number });
+              }}
+            >
+              {bulkAdjust.isPending ? dict.buyerPrices.bulkAdjust.adjusting : dict.buyerPrices.bulkAdjust.confirmYes}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {bulkAdjust.error && (
+        <p className="mt-2 text-[13px] font-medium text-danger">{bulkAdjust.error.message}</p>
+      )}
     </div>
   );
 }
