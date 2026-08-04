@@ -27,8 +27,8 @@ export type ImportCsvResult = {
 };
 
 const UNIT_SPECS = [
-  { labelTl: "piraso", labelEn: "per piece", sortOrder: "01", priceField: "individualCentavos" as const },
-  { labelTl: "pakete", labelEn: "pack", sortOrder: "02", priceField: "packCentavos" as const },
+  { labelTl: "piraso", labelEn: "per piece", priceField: "individualCentavos" as const },
+  { labelTl: "pakete", labelEn: "pack", priceField: "packCentavos" as const },
 ];
 
 /**
@@ -123,6 +123,17 @@ async function importOneRow(
     const validUntil = addHours(at, PRICE_VALIDITY_HOURS);
     let priceRowsInserted = 0;
 
+    // Newly-created units get a sort order after the product's existing
+    // units, instead of hardcoding "01"/"02" — those can collide with a
+    // pre-existing product's real unit labels (e.g. seed data's "1 kilo").
+    const existingUnitRows = await tx
+      .select({ sortOrder: productUnits.sortOrder })
+      .from(productUnits)
+      .where(eq(productUnits.productId, productId));
+    let nextSortOrder = existingUnitRows.length
+      ? Math.max(...existingUnitRows.map((u) => Number.parseInt(u.sortOrder, 10) || 0)) + 1
+      : 1;
+
     for (const spec of UNIT_SPECS) {
       const [existingUnit] = await tx
         .select({ id: productUnits.id })
@@ -140,11 +151,12 @@ async function importOneRow(
             productId,
             labelTl: spec.labelTl,
             labelEn: spec.labelEn,
-            sortOrder: spec.sortOrder,
+            sortOrder: String(nextSortOrder).padStart(2, "0"),
             weightGrams: null,
           })
           .returning({ id: productUnits.id });
         unitId = insertedUnit!.id;
+        nextSortOrder++;
       }
 
       const centavos = row[spec.priceField];
