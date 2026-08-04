@@ -13,6 +13,7 @@ export type CsvImportErrorDict = {
   unknownCategory: string;
   malformedPrice: string;
   priceOutOfRange: string;
+  rowsTruncated: string;
 };
 
 /** Same bounds as `setPriceInput` in `~/lib/schemas/price.ts` — one centavo up to ₱100,000. */

@@ -6,6 +6,7 @@ import Papa from "papaparse";
 import { and, eq, sql } from "drizzle-orm";
 
 import { now } from "~/lib/datetime";
+import { interpolate } from "~/lib/i18n/interpolate";
 import { db as defaultDb } from "~/server/db";
 import { dailyPrices, productUnits, products } from "~/server/db/schema";
 
@@ -15,7 +16,7 @@ type Db = typeof defaultDb;
 
 /** New price rows are good for 24 hours, same convention as buyer.setPrice. */
 const PRICE_VALIDITY_HOURS = 24;
-/** Rows beyond this are silently dropped — the format hint states the cap. */
+/** Rows beyond this are dropped, but reported as a single entry in `skipped` — not silently. */
 const MAX_ROWS = 1000;
 
 export type ImportCsvResult = {
@@ -58,6 +59,13 @@ export async function importCatalogCsv(
   let updated = 0;
   let priceRowsInserted = 0;
   const skipped: Array<{ row: number; reason: string }> = [];
+
+  if (parsed.data.length > MAX_ROWS) {
+    skipped.push({
+      row: 0,
+      reason: interpolate(errors.rowsTruncated, { count: parsed.data.length - MAX_ROWS }),
+    });
+  }
 
   for (const [index, raw] of rows.entries()) {
     const rowNum = index + 2; // +1 for 0-index, +1 for the header row

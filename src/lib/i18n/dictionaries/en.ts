@@ -256,6 +256,7 @@ export const en: Dictionary = {
           unknownCategory: "Unrecognized category: \"{value}\".",
           malformedPrice: "Invalid price ({field}): \"{value}\".",
           priceOutOfRange: "Price too small or too large ({field}): \"{value}\".",
+          rowsTruncated: "{count} rows were skipped — over the 1000-row-per-upload limit.",
         },
       },
     },

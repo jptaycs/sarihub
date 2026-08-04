@@ -259,6 +259,7 @@ export const tl = {
           unknownCategory: "Hindi kilalang kategorya: \"{value}\".",
           malformedPrice: "Hindi tamang presyo ({field}): \"{value}\".",
           priceOutOfRange: "Masyadong maliit o malaki ang presyo ({field}): \"{value}\".",
+          rowsTruncated: "{count} row ang na-skip — lampas sa 1000 na row bawat upload.",
         },
       },
     },
