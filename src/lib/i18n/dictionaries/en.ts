@@ -239,6 +239,17 @@ export const en: Dictionary = {
       weightGrams: "Weight (grams)",
       unitActive: "Active",
       csvImport: {
+        uploadButton: "Upload prices (CSV)",
+        panelHeading: "Upload prices from CSV",
+        formatHint:
+          "Header: name, category, pack_price, individual_price. Example: Sibuyas,gulay,161.00,15.00",
+        fileLabel: "Choose a CSV file",
+        submit: "Upload",
+        uploading: "Uploading…",
+        cancel: "Cancel",
+        resultSummary: "{created} new products, {updated} updated, {priceRowsInserted} prices set.",
+        skippedHeading: "Skipped rows ({count})",
+        skippedRow: "Row {row}: {reason}",
         errors: {
           emptyFile: "The file is empty.",
           blankName: "Name is required.",

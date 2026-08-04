@@ -242,6 +242,17 @@ export const tl = {
       weightGrams: "Timbang (gramo)",
       unitActive: "Aktibo",
       csvImport: {
+        uploadButton: "I-upload ang presyo (CSV)",
+        panelHeading: "Mag-upload ng presyo (CSV)",
+        formatHint:
+          "Header: name, category, pack_price, individual_price. Halimbawa: Sibuyas,gulay,161.00,15.00",
+        fileLabel: "Piliin ang CSV file",
+        submit: "I-upload",
+        uploading: "Ina-a-upload…",
+        cancel: "Huwag",
+        resultSummary: "{created} bagong produkto, {updated} na-update, {priceRowsInserted} presyong nailagay.",
+        skippedHeading: "Mga row na na-skip ({count})",
+        skippedRow: "Row {row}: {reason}",
         errors: {
           emptyFile: "Walang laman ang file.",
           blankName: "Kailangan ang pangalan.",
