@@ -30,6 +30,7 @@ export function CatalogClient() {
   const dict = useDictionary();
   const catalogQuery = trpc.admin.catalog.list.useQuery();
   const [creating, setCreating] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   if (catalogQuery.isLoading) {
     return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
@@ -42,12 +43,21 @@ export function CatalogClient() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="title-large">{dict.admin.catalog.title}</h2>
-        {!creating && (
-          <Button onClick={() => setCreating(true)}>{dict.admin.catalog.newProduct}</Button>
-        )}
+        <div className="flex gap-1.5">
+          {!uploading && (
+            <Button variant="secondary" onClick={() => setUploading(true)}>
+              {dict.admin.catalog.csvImport.uploadButton}
+            </Button>
+          )}
+          {!creating && (
+            <Button onClick={() => setCreating(true)}>{dict.admin.catalog.newProduct}</Button>
+          )}
+        </div>
       </div>
+
+      {uploading && <CsvImportPanel onDone={() => setUploading(false)} />}
 
       {creating && (
         <div className="mt-3 rounded-md border border-hair bg-white px-4 py-4">
@@ -61,6 +71,80 @@ export function CatalogClient() {
           <ProductRow key={product.id} product={product} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function CsvImportPanel(props: { onDone: () => void }) {
+  const dict = useDictionary();
+  const utils = trpc.useUtils();
+  const importCsv = trpc.admin.catalog.importCsv.useMutation({
+    onSuccess() {
+      void utils.admin.catalog.list.invalidate();
+    },
+  });
+
+  return (
+    <div className="mt-3 rounded-md border border-hair bg-white px-4 py-4">
+      <h3 className="text-[14px] font-medium">{dict.admin.catalog.csvImport.panelHeading}</h3>
+      <p className="mt-1 text-[13px] text-ink-2">{dict.admin.catalog.csvImport.formatHint}</p>
+
+      <label className="mt-2.5 block">
+        <span className="mb-1 block text-[13px] text-ink-2">{dict.admin.catalog.csvImport.fileLabel}</span>
+        <input
+          type="file"
+          accept=".csv"
+          disabled={importCsv.isPending}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const csv = await file.text();
+            importCsv.mutate({ csv });
+            e.target.value = "";
+          }}
+          className="block w-full text-[13px]"
+        />
+      </label>
+
+      {importCsv.isPending && (
+        <p className="mt-2 text-[13px] text-ink-2">{dict.admin.catalog.csvImport.uploading}</p>
+      )}
+
+      {importCsv.error && (
+        <p className="mt-2 text-[13px] font-medium text-danger">{importCsv.error.message}</p>
+      )}
+
+      {importCsv.data && (
+        <div className="mt-2.5 rounded-md bg-success-soft px-3 py-2.5 text-[13px] text-success">
+          <p className="font-medium">
+            {interpolate(dict.admin.catalog.csvImport.resultSummary, {
+              created: importCsv.data.created,
+              updated: importCsv.data.updated,
+              priceRowsInserted: importCsv.data.priceRowsInserted,
+            })}
+          </p>
+          {importCsv.data.skipped.length > 0 && (
+            <div className="mt-2">
+              <p className="font-medium text-warning">
+                {interpolate(dict.admin.catalog.csvImport.skippedHeading, {
+                  count: importCsv.data.skipped.length,
+                })}
+              </p>
+              <ul className="mt-1 list-disc pl-4 text-ink-2">
+                {importCsv.data.skipped.map((s) => (
+                  <li key={s.row}>
+                    {interpolate(dict.admin.catalog.csvImport.skippedRow, { row: s.row, reason: s.reason })}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Button variant="secondary" block className="mt-3" onClick={props.onDone}>
+        {dict.admin.catalog.csvImport.cancel}
+      </Button>
     </div>
   );
 }
