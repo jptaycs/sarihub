@@ -230,15 +230,18 @@ export const buyerRouter = router({
       return { adjusted: 0 };
     }
 
-    await ctx.db.insert(dailyPrices).values(
-      liveRows.map((r) => ({
-        productUnitId: r.productUnitId,
-        priceCentavos: adjustCentavos(r.priceCentavos, input.mode, input.direction, input.value),
-        capturedAt: at,
-        validUntil,
-        capturedBy: ctx.staff.userId,
-      })),
-    );
+    await ctx.db
+      .insert(dailyPrices)
+      .values(
+        liveRows.map((r) => ({
+          productUnitId: r.productUnitId,
+          priceCentavos: adjustCentavos(r.priceCentavos, input.mode, input.direction, input.value),
+          capturedAt: at,
+          validUntil,
+          capturedBy: ctx.staff.userId,
+        })),
+      )
+      .onConflictDoNothing();
 
     return { adjusted: liveRows.length };
   }),

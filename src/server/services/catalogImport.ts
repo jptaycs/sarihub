@@ -149,13 +149,16 @@ async function importOneRow(
 
       const centavos = row[spec.priceField];
       if (centavos !== null) {
-        await tx.insert(dailyPrices).values({
-          productUnitId: unitId,
-          priceCentavos: BigInt(centavos),
-          capturedAt: at,
-          validUntil,
-          capturedBy,
-        });
+        await tx
+          .insert(dailyPrices)
+          .values({
+            productUnitId: unitId,
+            priceCentavos: BigInt(centavos),
+            capturedAt: at,
+            validUntil,
+            capturedBy,
+          })
+          .onConflictDoNothing();
         priceRowsInserted++;
       }
     }
