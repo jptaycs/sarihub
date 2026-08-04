@@ -255,6 +255,7 @@ export const en: Dictionary = {
           blankName: "Name is required.",
           unknownCategory: "Unrecognized category: \"{value}\".",
           malformedPrice: "Invalid price ({field}): \"{value}\".",
+          priceOutOfRange: "Price too small or too large ({field}): \"{value}\".",
         },
       },
     },

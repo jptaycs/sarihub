@@ -12,7 +12,12 @@ export type CsvImportErrorDict = {
   blankName: string;
   unknownCategory: string;
   malformedPrice: string;
+  priceOutOfRange: string;
 };
+
+/** Same bounds as `setPriceInput` in `~/lib/schemas/price.ts` — one centavo up to ₱100,000. */
+const MIN_PRICE_CENTAVOS = 1;
+const MAX_PRICE_CENTAVOS = 10_000_000;
 
 export type ValidatedRow = {
   name: string;
@@ -46,6 +51,15 @@ export function validateRow(
       reason: interpolate(errors.malformedPrice, { field: "pack_price", value: packRaw }),
     };
   }
+  if (
+    packCentavos !== null &&
+    (packCentavos < MIN_PRICE_CENTAVOS || packCentavos > MAX_PRICE_CENTAVOS)
+  ) {
+    return {
+      ok: false,
+      reason: interpolate(errors.priceOutOfRange, { field: "pack_price", value: packRaw }),
+    };
+  }
 
   const individualRaw = (raw.individual_price ?? "").trim();
   const individualCentavos = individualRaw ? pesosToCentavos(individualRaw) : null;
@@ -53,6 +67,15 @@ export function validateRow(
     return {
       ok: false,
       reason: interpolate(errors.malformedPrice, { field: "individual_price", value: individualRaw }),
+    };
+  }
+  if (
+    individualCentavos !== null &&
+    (individualCentavos < MIN_PRICE_CENTAVOS || individualCentavos > MAX_PRICE_CENTAVOS)
+  ) {
+    return {
+      ok: false,
+      reason: interpolate(errors.priceOutOfRange, { field: "individual_price", value: individualRaw }),
     };
   }
 

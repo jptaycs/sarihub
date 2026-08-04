@@ -58,4 +58,23 @@ describe("validateRow", () => {
     );
     expect(result).toEqual({ ok: false, reason: 'Hindi tamang presyo (pack_price): "abc".' });
   });
+
+  it("rejects a zero price", () => {
+    const result = validateRow(
+      { name: "Sibuyas", category: "gulay", pack_price: "0", individual_price: "" },
+      errors,
+    );
+    expect(result).toEqual({ ok: false, reason: 'Masyadong maliit o malaki ang presyo (pack_price): "0".' });
+  });
+
+  it("rejects a price above the ₱100,000 cap", () => {
+    const result = validateRow(
+      { name: "Sibuyas", category: "gulay", pack_price: "", individual_price: "999999999" },
+      errors,
+    );
+    expect(result).toEqual({
+      ok: false,
+      reason: 'Masyadong maliit o malaki ang presyo (individual_price): "999999999".',
+    });
+  });
 });
