@@ -241,6 +241,14 @@ export const tl = {
       sortOrder: "Ayos (sort)",
       weightGrams: "Timbang (gramo)",
       unitActive: "Aktibo",
+      csvImport: {
+        errors: {
+          emptyFile: "Walang laman ang file.",
+          blankName: "Kailangan ang pangalan.",
+          unknownCategory: "Hindi kilalang kategorya: \"{value}\".",
+          malformedPrice: "Hindi tamang presyo ({field}): \"{value}\".",
+        },
+      },
     },
     suki: {
       title: "Suki exposure",

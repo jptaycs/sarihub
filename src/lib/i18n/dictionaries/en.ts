@@ -238,6 +238,14 @@ export const en: Dictionary = {
       sortOrder: "Sort order",
       weightGrams: "Weight (grams)",
       unitActive: "Active",
+      csvImport: {
+        errors: {
+          emptyFile: "The file is empty.",
+          blankName: "Name is required.",
+          unknownCategory: "Unrecognized category: \"{value}\".",
+          malformedPrice: "Invalid price ({field}): \"{value}\".",
+        },
+      },
     },
     suki: {
       title: "Suki exposure",
