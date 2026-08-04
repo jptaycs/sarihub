@@ -9,6 +9,7 @@ import { getDictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import {
   createStoreInput,
+  importCsvInput,
   recordAdjustmentInput,
   recordPaymentInput,
   setOrderStatusInput,
@@ -26,6 +27,7 @@ import {
   stores,
   sukiLedger,
 } from "~/server/db/schema";
+import { importCatalogCsv } from "~/server/services/catalogImport";
 import { adminProcedure, router } from "~/server/trpc/init";
 
 /** The Manila-midnight instant for "today" — the delivery day the board shows. */
@@ -221,6 +223,11 @@ const catalogAdminRouter = router({
       .values(fields)
       .returning({ id: productUnits.id });
     return { id: created!.id };
+  }),
+
+  importCsv: adminProcedure.input(importCsvInput).mutation(async ({ ctx, input }) => {
+    const errors = getDictionary(ctx.locale).admin.catalog.csvImport.errors;
+    return importCatalogCsv(ctx.db, input.csv, ctx.staff.userId, errors);
   }),
 });
 

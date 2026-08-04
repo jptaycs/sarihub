@@ -82,3 +82,9 @@ export const updateStoreInput = z.object({
   sukiLimitCentavos: z.number().int().min(0).max(100_000_000),
 });
 export type UpdateStoreInput = z.infer<typeof updateStoreInput>;
+
+export const importCsvInput = z.object({
+  /** Raw CSV text, already read client-side via file.text() — one parser, server-side only. */
+  csv: z.string().trim().min(1, "Walang laman ang file."),
+});
+export type ImportCsvInput = z.infer<typeof importCsvInput>;
