@@ -244,7 +244,6 @@ export const en: Dictionary = {
         formatHint:
           "Header: name, category, pack_price, individual_price. Example: Sibuyas,gulay,161.00,15.00",
         fileLabel: "Choose a CSV file",
-        submit: "Upload",
         uploading: "Uploading…",
         cancel: "Cancel",
         resultSummary: "{created} new products, {updated} updated, {priceRowsInserted} prices set.",
