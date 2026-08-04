@@ -2,12 +2,13 @@ import "server-only";
 
 import { TRPCError } from "@trpc/server";
 import { addHours } from "date-fns";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
 
 import { formatManila, now } from "~/lib/datetime";
 import { getDictionary } from "~/lib/i18n/dictionaries";
-import { markOutOfStockInput, setPriceInput } from "~/lib/schemas/price";
+import { bulkAdjustPricesInput, markOutOfStockInput, setPriceInput } from "~/lib/schemas/price";
 import { dailyPrices, productUnits, products, type ProductCategory } from "~/server/db/schema";
+import { adjustCentavos } from "~/server/services/pricing";
 import { markUnitOutOfStock, stockoutsForDay } from "~/server/services/stockouts";
 import { buyerProcedure, router, staffProcedure } from "~/server/trpc/init";
 
@@ -196,5 +197,49 @@ export const buyerRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: result.message });
     }
     return result;
+  }),
+
+  /**
+   * One action for a market-wide price swing: every active unit with a live
+   * price today gets a fresh row at the adjusted price. Same 24-hour-validity
+   * append-only write as setPrice/carryOverYesterday — never UPDATE.
+   */
+  bulkAdjustPrices: buyerProcedure.input(bulkAdjustPricesInput).mutation(async ({ ctx, input }) => {
+    const at = now();
+    const validUntil = addHours(at, PRICE_VALIDITY_HOURS);
+
+    const liveRows = await ctx.db
+      .selectDistinctOn([dailyPrices.productUnitId], {
+        productUnitId: dailyPrices.productUnitId,
+        priceCentavos: dailyPrices.priceCentavos,
+      })
+      .from(dailyPrices)
+      .innerJoin(productUnits, eq(productUnits.id, dailyPrices.productUnitId))
+      .innerJoin(products, eq(products.id, productUnits.productId))
+      .where(
+        and(
+          eq(productUnits.isActive, true),
+          eq(products.isActive, true),
+          lte(dailyPrices.capturedAt, at),
+          gt(dailyPrices.validUntil, at),
+        ),
+      )
+      .orderBy(dailyPrices.productUnitId, desc(dailyPrices.capturedAt));
+
+    if (liveRows.length === 0) {
+      return { adjusted: 0 };
+    }
+
+    await ctx.db.insert(dailyPrices).values(
+      liveRows.map((r) => ({
+        productUnitId: r.productUnitId,
+        priceCentavos: adjustCentavos(r.priceCentavos, input.mode, input.direction, input.value),
+        capturedAt: at,
+        validUntil,
+        capturedBy: ctx.staff.userId,
+      })),
+    );
+
+    return { adjusted: liveRows.length };
   }),
 });
