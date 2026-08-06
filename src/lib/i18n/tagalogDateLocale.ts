@@ -45,8 +45,8 @@ export const fil: Locale = {
   localize: {
     ...enUS.localize,
     day: (value, options) =>
-      (options?.width === "abbreviated" ? DAYS_ABBREVIATED : DAYS_WIDE)[value],
+      (options?.width === "abbreviated" ? DAYS_ABBREVIATED : DAYS_WIDE)[value]!,
     month: (value, options) =>
-      (options?.width === "abbreviated" ? MONTHS_ABBREVIATED : MONTHS_WIDE)[value],
+      (options?.width === "abbreviated" ? MONTHS_ABBREVIATED : MONTHS_WIDE)[value]!,
   },
 };
