@@ -10,9 +10,10 @@ import { cn } from "~/lib/cn";
 import { formatManila, now, toManila } from "~/lib/datetime";
 import { nextDeliveryDate } from "~/lib/deliverySchedule";
 import { formatPeso } from "~/lib/format";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { interpolate } from "~/lib/i18n/interpolate";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
+import type { Locale } from "~/lib/i18n/locale";
 import { trpc } from "~/lib/trpc/client";
 import { useCart } from "~/lib/useCart";
 import type { ProductCategory } from "~/server/db/schema";
@@ -31,13 +32,13 @@ function greeting(dict: Dictionary): string {
 }
 
 /** "later this morning" / "tomorrow morning" / "Mon, 13 Jul" for the delivery day. */
-function deliveryLabel(dict: Dictionary, deliverOn: Date): string {
+function deliveryLabel(dict: Dictionary, locale: Locale, deliverOn: Date): string {
   const dayOf = (d: Date) => formatManila(d, "yyyy-MM-dd");
   const today = now();
   if (dayOf(deliverOn) === dayOf(today)) return dict.home.deliveryToday;
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
   if (dayOf(deliverOn) === dayOf(tomorrow)) return dict.home.deliveryTomorrow;
-  return formatManila(deliverOn, "EEE, d MMM");
+  return formatManila(deliverOn, "EEE, d MMM", locale);
 }
 
 export function HomeClient() {
@@ -337,6 +338,7 @@ function CartSheet(props: {
 }) {
   const { store, lines, totalCentavos } = props;
   const dict = useDictionary();
+  const { locale } = useLocale();
   const utils = trpc.useUtils();
   const place = trpc.orders.place.useMutation({
     onSuccess() {
@@ -366,7 +368,7 @@ function CartSheet(props: {
           <p className="mt-1 text-[13px] text-ink-2">
             {interpolate(dict.cart.placedSubtitle, {
               price: formatPeso(placed.totalCentavos),
-              when: deliveryLabel(dict, placed.deliverOn),
+              when: deliveryLabel(dict, locale, placed.deliverOn),
             })}
           </p>
           <Button
@@ -429,7 +431,7 @@ function CartSheet(props: {
 
       {deliverOn && (
         <p className="pb-3 text-[13px] text-ink-2">
-          {interpolate(dict.cart.deliveryNote, { when: deliveryLabel(dict, deliverOn) })}
+          {interpolate(dict.cart.deliveryNote, { when: deliveryLabel(dict, locale, deliverOn) })}
         </p>
       )}
 

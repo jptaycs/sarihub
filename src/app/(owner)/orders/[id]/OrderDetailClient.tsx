@@ -10,7 +10,7 @@ import { formatManila, formatManilaDate, formatManilaTime } from "~/lib/datetime
 import { formatPeso } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 
 function timelineSteps(dict: Dictionary) {
@@ -24,6 +24,7 @@ function timelineSteps(dict: Dictionary) {
 
 export function OrderDetailClient(props: { orderId: string }) {
   const dict = useDictionary();
+  const { locale } = useLocale();
   const utils = trpc.useUtils();
   const orderQuery = trpc.orders.get.useQuery(
     { orderId: props.orderId },
@@ -63,7 +64,7 @@ export function OrderDetailClient(props: { orderId: string }) {
     <div>
       <div className="flex items-center justify-between">
         <span className="text-[14px] font-medium">
-          {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn) })}
+          {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn, locale) })}
         </span>
         {isCancelled && (
           <span className="rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-danger">
@@ -77,7 +78,7 @@ export function OrderDetailClient(props: { orderId: string }) {
           <div className="font-medium text-danger">{dict.orderDetail.cancelledBanner}</div>
           {order.cancelledAt && (
             <div className="mt-0.5 text-ink-2">
-              {formatManila(order.cancelledAt, "d MMM, h:mm a")}
+              {formatManila(order.cancelledAt, "d MMM, h:mm a", locale)}
               {order.cancelledReason ? ` · ${order.cancelledReason}` : ""}
             </div>
           )}
@@ -110,7 +111,7 @@ export function OrderDetailClient(props: { orderId: string }) {
                     </div>
                     {done && (
                       <div className="text-xs text-ink-2">
-                        {formatManila(at, "d MMM")} · {formatManilaTime(at)}
+                        {formatManila(at, "d MMM", locale)} · {formatManilaTime(at, locale)}
                       </div>
                     )}
                   </div>
@@ -169,8 +170,8 @@ export function OrderDetailClient(props: { orderId: string }) {
               </Button>
               <p className="mt-2 text-center text-xs text-ink-3">
                 {interpolate(dict.orderDetail.cancelUntil, {
-                  time: formatManilaTime(order.cancelUntil),
-                  date: formatManila(order.cancelUntil, "d MMM"),
+                  time: formatManilaTime(order.cancelUntil, locale),
+                  date: formatManila(order.cancelUntil, "d MMM", locale),
                 })}
               </p>
             </>

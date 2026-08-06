@@ -8,7 +8,7 @@ import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 
 function statusLabel(dict: Dictionary): Record<string, { text: string; className: string }> {
@@ -28,6 +28,7 @@ function statusLabel(dict: Dictionary): Record<string, { text: string; className
 
 export function OrdersClient() {
   const dict = useDictionary();
+  const { locale } = useLocale();
   const ordersQuery = trpc.orders.list.useQuery();
 
   if (ordersQuery.isLoading) {
@@ -65,7 +66,7 @@ export function OrdersClient() {
           >
             <div className="flex items-center justify-between">
               <span className="text-[14px] font-medium">
-                {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn) })}
+                {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn, locale) })}
               </span>
               <span
                 className={cn(
