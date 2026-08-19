@@ -30,8 +30,7 @@ describe("Manila formatters", () => {
   // only produced by the wide "MMMM" token. The task-2 brief's expected value
   // of "25 Mayo 2026" here contradicts Task 1's own already-passing tests
   // (tagalogDateLocale.test.ts: `format(date, "EEE, d MMM", { locale: fil })`
-  // => "Lun, 25 May"). Corrected to "May" to match verified behavior; see
-  // task-2-report.md for details.
+  // => "Lun, 25 May"). Corrected to "May" to match verified behavior.
   it("formatManilaDate renders Tagalog month name when locale is 'tl'", () => {
     expect(formatManilaDate(utc, "tl")).toBe("25 May 2026");
   });

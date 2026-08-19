@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { enUS } from "date-fns/locale";
 import { describe, expect, it } from "vitest";
 
 import { fil } from "./tagalogDateLocale";
@@ -81,5 +82,10 @@ describe("fil (Tagalog date-fns Locale)", () => {
   it("falls through to enUS for tokens this app never uses (AM/PM dayPeriod)", () => {
     const morning = new Date(2026, 4, 25, 8, 0);
     expect(format(morning, "h:mm a", { locale: fil })).toBe("8:00 AM");
+  });
+
+  it("falls through to enUS for the narrow day/month width (not exercised by the app, but must not silently collapse to wide)", () => {
+    expect(format(date, "EEEEE", { locale: fil })).toBe(format(date, "EEEEE", { locale: enUS }));
+    expect(format(date, "MMMMM", { locale: fil })).toBe(format(date, "MMMMM", { locale: enUS }));
   });
 });

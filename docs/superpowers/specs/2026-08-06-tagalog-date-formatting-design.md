@@ -73,7 +73,7 @@ rendered in the same token slot — but worth this note so a future reader
 doesn't mistake it for a copy-paste bug.
 
 Day/month names are **translated in place, cardinal, same token structure**
-as the existing English patterns — `"d MMM yyyy"` renders `"23 Mayo 2026"`,
+as the existing English patterns — `"d MMM yyyy"` renders `"23 Hun 2026"`,
 not a restructured `"ika-23 ng Mayo, 2026"`. This matches the app's existing
 casual, direct Tagalog tone (`"Kailangan po"`, not formal/literary register)
 and is a minimal change to string *content*, never string *shape*.

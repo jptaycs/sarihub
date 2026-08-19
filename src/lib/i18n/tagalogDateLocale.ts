@@ -34,7 +34,7 @@ const MONTHS_ABBREVIATED = [
 
 /**
  * Filipino/Tagalog date-fns Locale. Only day and month names are translated
- * (cardinal, in place — "23 Mayo 2026", not "ika-23 ng Mayo"; AM/PM is left
+ * (cardinal, in place — "23 Hun 2026", not "ika-23 ng Hunyo"; AM/PM is left
  * as-is). Nothing in this app uses ordinal, formatLong (P/PP/PPP), or
  * formatDistance/formatRelative tokens, so those fall through to enUS
  * unchanged rather than shipping unverified translations with zero callers.
@@ -44,9 +44,19 @@ export const fil: Locale = {
   code: "fil",
   localize: {
     ...enUS.localize,
-    day: (value, options) =>
-      (options?.width === "abbreviated" ? DAYS_ABBREVIATED : DAYS_WIDE)[value]!,
-    month: (value, options) =>
-      (options?.width === "abbreviated" ? MONTHS_ABBREVIATED : MONTHS_WIDE)[value]!,
+    day: (value, options) => {
+      const width = options?.width;
+      if (width !== "abbreviated" && width !== "wide" && width !== undefined) {
+        return enUS.localize.day(value, options);
+      }
+      return (width === "abbreviated" ? DAYS_ABBREVIATED : DAYS_WIDE)[value]!;
+    },
+    month: (value, options) => {
+      const width = options?.width;
+      if (width !== "abbreviated" && width !== "wide" && width !== undefined) {
+        return enUS.localize.month(value, options);
+      }
+      return (width === "abbreviated" ? MONTHS_ABBREVIATED : MONTHS_WIDE)[value]!;
+    },
   },
 };
