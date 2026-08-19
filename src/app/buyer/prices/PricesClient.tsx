@@ -11,7 +11,7 @@ import { cn } from "~/lib/cn";
 import { formatManila, now } from "~/lib/datetime";
 import { formatPeso, pesosToCentavos } from "~/lib/format";
 import { interpolate } from "~/lib/i18n/interpolate";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -22,6 +22,7 @@ type BoardUnit = BoardProduct["units"][number];
 
 export function PricesClient() {
   const dict = useDictionary();
+  const { locale } = useLocale();
   const utils = trpc.useUtils();
   const boardQuery = trpc.buyer.priceBoard.useQuery();
   const carryOver = trpc.buyer.carryOverYesterday.useMutation({
@@ -52,7 +53,7 @@ export function PricesClient() {
         <div>
           <h1 className="title-large">{dict.buyerPrices.title}</h1>
           <p className="mt-0.5 text-[13px] text-ink-2">
-            {formatManila(now(), "EEEE, d MMM yyyy")}
+            {formatManila(now(), "EEEE, d MMM yyyy", locale)}
           </p>
         </div>
         <Link

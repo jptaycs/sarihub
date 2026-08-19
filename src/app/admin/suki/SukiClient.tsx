@@ -9,7 +9,7 @@ import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import { formatManila } from "~/lib/datetime";
 import { formatPeso, formatPhone, pesosToCentavos } from "~/lib/format";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -102,6 +102,7 @@ function StoreRow(props: { store: ExposureStore; open: boolean; onToggle: () => 
 
 function StoreLedgerPanel(props: { storeId: string }) {
   const dict = useDictionary();
+  const { locale } = useLocale();
   const utils = trpc.useUtils();
   const ledgerQuery = trpc.admin.suki.ledger.useQuery({ storeId: props.storeId });
 
@@ -238,7 +239,7 @@ function StoreLedgerPanel(props: { storeId: string }) {
                   <span className="text-ink-2"> · {entry.reason}</span>
                 )}
                 <div className="text-xs text-ink-3">
-                  {formatManila(entry.createdAt, "d MMM yyyy, h:mm a")}
+                  {formatManila(entry.createdAt, "d MMM yyyy, h:mm a", locale)}
                 </div>
               </div>
               <span

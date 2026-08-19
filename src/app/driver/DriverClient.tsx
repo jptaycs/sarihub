@@ -11,7 +11,7 @@ import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso, formatPhone } from "~/lib/format";
 import { interpolate } from "~/lib/i18n/interpolate";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { uploadPod } from "~/lib/supabase/storage";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
@@ -24,6 +24,7 @@ type Stop = RouterOutputs["driver"]["stops"][number];
 
 export function DriverClient() {
   const dict = useDictionary();
+  const { locale } = useLocale();
   const routesQuery = trpc.driver.routesToday.useQuery();
   const [pickedRouteId, setPickedRouteId] = useState<string | null>(null);
 
@@ -45,7 +46,7 @@ export function DriverClient() {
       <header className="flex items-start justify-between py-3">
         <div>
           <h1 className="title-large">{dict.driver.title}</h1>
-          <p className="mt-0.5 text-[13px] text-ink-2">{formatManilaDate(day)}</p>
+          <p className="mt-0.5 text-[13px] text-ink-2">{formatManilaDate(day, locale)}</p>
         </div>
         <Link
           href="/profile"

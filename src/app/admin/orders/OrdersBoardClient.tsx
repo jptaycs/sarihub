@@ -10,7 +10,7 @@ import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -40,6 +40,7 @@ function nextStep(
 
 export function OrdersBoardClient() {
   const dict = useDictionary();
+  const { locale } = useLocale();
   const boardQuery = trpc.admin.orders.board.useQuery(undefined, {
     refetchInterval: 60_000,
   });
@@ -65,7 +66,7 @@ export function OrdersBoardClient() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="title-large">
-          {interpolate(dict.admin.orders.heading, { date: formatManilaDate(board.day) })}
+          {interpolate(dict.admin.orders.heading, { date: formatManilaDate(board.day, locale) })}
         </h2>
         <div className="flex flex-wrap gap-1.5">
           <RoutePill
