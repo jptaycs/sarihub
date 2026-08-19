@@ -32,6 +32,28 @@ const MONTHS_ABBREVIATED = [
   "Dis",
 ];
 
+type Width = NonNullable<Parameters<typeof enUS.localize.day>[1]>["width"];
+
+/**
+ * Builds a `localize.day`/`localize.month` replacement: only "abbreviated"
+ * and "wide" (the app's only two used widths) resolve from `wide`/
+ * `abbreviated`; every other width (e.g. "narrow") forwards to `fallback`
+ * unchanged, matching this file's fall-through contract.
+ */
+function namedLocalize<V extends number>(
+  wide: readonly string[],
+  abbreviated: readonly string[],
+  fallback: (value: V, options?: { width?: Width }) => string,
+): (value: V, options?: { width?: Width }) => string {
+  return (value, options) => {
+    const width = options?.width;
+    if (width !== "abbreviated" && width !== "wide" && width !== undefined) {
+      return fallback(value, options);
+    }
+    return (width === "abbreviated" ? abbreviated : wide)[value]!;
+  };
+}
+
 /**
  * Filipino/Tagalog date-fns Locale. Only day and month names are translated
  * (cardinal, in place — "23 Hun 2026", not "ika-23 ng Hunyo"; AM/PM is left
@@ -44,19 +66,7 @@ export const fil: Locale = {
   code: "fil",
   localize: {
     ...enUS.localize,
-    day: (value, options) => {
-      const width = options?.width;
-      if (width !== "abbreviated" && width !== "wide" && width !== undefined) {
-        return enUS.localize.day(value, options);
-      }
-      return (width === "abbreviated" ? DAYS_ABBREVIATED : DAYS_WIDE)[value]!;
-    },
-    month: (value, options) => {
-      const width = options?.width;
-      if (width !== "abbreviated" && width !== "wide" && width !== undefined) {
-        return enUS.localize.month(value, options);
-      }
-      return (width === "abbreviated" ? MONTHS_ABBREVIATED : MONTHS_WIDE)[value]!;
-    },
+    day: namedLocalize(DAYS_WIDE, DAYS_ABBREVIATED, enUS.localize.day),
+    month: namedLocalize(MONTHS_WIDE, MONTHS_ABBREVIATED, enUS.localize.month),
   },
 };
