@@ -35,9 +35,11 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/verify") || pathname.startsWith("/auth");
   // /offline stays public so the service worker can precache it before sign-in.
+  // /api/cron/* routes handle their own auth via bearer token
   const isPublic =
     isAuthRoute ||
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/cron/") ||
     pathname === "/favicon.ico" ||
     pathname === "/offline";
 
