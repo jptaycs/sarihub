@@ -360,8 +360,8 @@ export const en: Dictionary = {
     kusina: "Kitchen essentials",
   },
   sms: {
-    confirmed: "Hi {storeName}, we've received your order. Arriving tomorrow morning. – SariHub",
-    outForDelivery: "Your order is on the way, {storeName}! Arriving this morning. – SariHub",
-    delivered: "Your order has been delivered, {storeName}. Thank you! – SariHub",
+    confirmed: "Hi {storeName}, we've received your order. Arriving tomorrow morning. - SariHub",
+    outForDelivery: "Your order is on the way, {storeName}! Arriving this morning. - SariHub",
+    delivered: "Your order has been delivered, {storeName}. Thank you! - SariHub",
   },
 };

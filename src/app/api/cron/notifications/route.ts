@@ -4,6 +4,11 @@ import { env } from "~/lib/env";
 import { db } from "~/server/db";
 import { processNotificationQueue } from "~/server/services/notifications";
 
+// 50-row batch cap in processNotificationQueue × up to ~10s per send (see
+// sms.ts's fetch timeout) could approach Vercel's default limit on a large
+// backlog — set an explicit budget rather than relying on the platform default.
+export const maxDuration = 60;
+
 /**
  * Vercel Cron target (see vercel.json), hit every 5 minutes. Vercel attaches
  * "Authorization: Bearer $CRON_SECRET" to its own scheduled requests once

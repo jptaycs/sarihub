@@ -5,6 +5,7 @@ import { and, desc, eq, inArray, lte, gt, sql } from "drizzle-orm";
 import { db as defaultDb } from "~/server/db";
 import {
   dailyPrices,
+  notificationQueue,
   orderItems,
   orders,
   productUnits,
@@ -356,6 +357,14 @@ export async function cancelOrder(
         cancelledReason: dict.cancelledReasonText,
       })
       .where(eq(orders.id, orderId));
+
+    // A cancelled order should never send its already-queued "confirmed" SMS —
+    // delete it if the cron hasn't picked it up yet. Deleting (not marking
+    // failed/cancelled) keeps the (order_id, kind) unique constraint from
+    // blocking a legitimate re-notification if this order is ever reinstated.
+    await tx
+      .delete(notificationQueue)
+      .where(and(eq(notificationQueue.orderId, orderId), eq(notificationQueue.status, "pending")));
 
     // Reverse the tab charge. The ledger stays append-only.
     await tx.insert(sukiLedger).values({

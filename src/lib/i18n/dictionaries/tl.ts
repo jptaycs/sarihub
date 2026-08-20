@@ -363,9 +363,9 @@ export const tl = {
     kusina: "Kusina",
   },
   sms: {
-    confirmed: "Suking {storeName}, natanggap na po ang order niyo. Aabot bukas ng umaga. – SariHub",
-    outForDelivery: "Nasa daan na po ang order niyo, {storeName}! Aabot na sa umaga. – SariHub",
-    delivered: "Naihatid na po ang order niyo, {storeName}. Salamat sa pagtitiwala! – SariHub",
+    confirmed: "Suking {storeName}, natanggap na po ang order niyo. Aabot bukas ng umaga. - SariHub",
+    outForDelivery: "Nasa daan na po ang order niyo, {storeName}! Aabot na sa umaga. - SariHub",
+    delivered: "Naihatid na po ang order niyo, {storeName}. Salamat sa pagtitiwala! - SariHub",
   },
 };
 

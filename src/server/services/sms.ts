@@ -2,6 +2,9 @@ import "server-only";
 
 import { env } from "~/lib/env";
 
+// Semaphore's documented `number` field format (639XXXXXXXXX, no leading "+")
+// has not been verified against a live account — no SEMAPHORE_API_KEY exists
+// yet. Re-check this against Semaphore's current API docs once one does.
 const SEMAPHORE_URL = "https://api.semaphore.co/api/v4/messages";
 
 export type SendSmsResult = { ok: true } | { ok: false; error: string };
@@ -23,7 +26,8 @@ export async function sendSms(phoneE164: string, message: string): Promise<SendS
     const res = await fetch(SEMAPHORE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ apikey: apiKey, number: phoneE164, message }),
+      body: new URLSearchParams({ apikey: apiKey, number: phoneE164.replace(/^\+/, ""), message }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       const body = await res.text();

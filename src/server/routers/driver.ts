@@ -142,6 +142,9 @@ export const driverRouter = router({
         .from(stores)
         .where(eq(stores.id, order.store_id))
         .limit(1);
+      // orders.storeId is a NOT NULL FK (onDelete: restrict), so this
+      // lookup can never actually miss — the guard is here only to
+      // satisfy TypeScript's narrowing.
       if (orderStore) {
         await enqueueNotification(
           tx,

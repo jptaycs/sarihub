@@ -145,18 +145,22 @@ const ordersAdminRouter = router({
         .where(eq(orders.id, input.orderId));
 
       if (input.status === "in_transit" || input.status === "delivered") {
+        const kind = input.status === "in_transit" ? "out_for_delivery" : "delivered";
         const [orderStore] = await tx
           .select({ name: stores.name, phoneE164: stores.phoneE164 })
           .from(stores)
           .where(eq(stores.id, order.store_id))
           .limit(1);
+        // orders.storeId is a NOT NULL FK (onDelete: restrict), so this
+        // lookup can never actually miss — the guard is here only to
+        // satisfy TypeScript's narrowing.
         if (orderStore) {
           await enqueueNotification(
             tx,
             input.orderId,
-            input.status === "in_transit" ? "out_for_delivery" : "delivered",
+            kind,
             orderStore.phoneE164,
-            notificationMessage(getDictionary(ctx.locale), input.status === "in_transit" ? "out_for_delivery" : "delivered", orderStore.name),
+            notificationMessage(getDictionary(ctx.locale), kind, orderStore.name),
           );
         }
       }

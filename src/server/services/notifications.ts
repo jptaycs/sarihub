@@ -1,7 +1,7 @@
 // src/server/services/notifications.ts
 import "server-only";
 
-import { and, eq, isNotNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, lte, or } from "drizzle-orm";
 
 import { now } from "~/lib/datetime";
 import { db as defaultDb } from "~/server/db";
@@ -59,7 +59,11 @@ export async function processNotificationQueue(db: Db): Promise<{ sent: number; 
           ),
         ),
       )
-      .for("update", { skipLocked: true });
+      // Oldest first, so a single cron run can't send "out for delivery"
+      // before "confirmed" for the same order if both are due at once.
+      .orderBy(asc(notificationQueue.createdAt))
+      .for("update", { skipLocked: true })
+      .limit(50);
 
     for (const row of due) {
       const result = await sendSms(row.phoneE164, row.message);
@@ -83,6 +87,9 @@ export async function processNotificationQueue(db: Db): Promise<{ sent: number; 
           lastError: result.error,
           // null once retries are exhausted — this is the terminal marker
           // that excludes the row from future runs' WHERE clause above.
+          // The (order_id, kind) unique constraint means this row can never
+          // be re-queued by the app once terminal; the only recovery is a
+          // manual DB UPDATE resetting status/next_attempt_at.
           nextAttemptAt: nextIn === null ? null : new Date(at.getTime() + nextIn * 60_000),
         })
         .where(eq(notificationQueue.id, row.id));
