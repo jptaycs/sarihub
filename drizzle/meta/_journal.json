@@ -36,6 +36,13 @@
       "when": 1785175683382,
       "tag": "0004_glorious_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787199387822,
+      "tag": "0005_sms_notification_queue",
+      "breakpoints": true
     }
   ]
 }
