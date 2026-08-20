@@ -8,6 +8,8 @@ import { formatManila, fromManila, now } from "~/lib/datetime";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { markDeliveredInput } from "~/lib/schemas/driver";
 import { orderItems, orders, productUnits, products, routes, stores } from "~/server/db/schema";
+import { notificationMessage } from "~/server/services/notificationMessage";
+import { enqueueNotification } from "~/server/services/notifications";
 import { driverProcedure, router } from "~/server/trpc/init";
 
 /** The Manila-midnight instant for "today" — the delivery day being driven. */
@@ -104,8 +106,8 @@ export const driverRouter = router({
     const at = now();
 
     return ctx.db.transaction(async (tx) => {
-      const rows = await tx.execute<{ status: string }>(
-        sql`SELECT status FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
+      const rows = await tx.execute<{ status: string; store_id: string }>(
+        sql`SELECT status, store_id FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
       );
       const order = rows[0];
       if (!order) {
@@ -134,6 +136,21 @@ export const driverRouter = router({
           podSignaturePath: input.podSignaturePath ?? null,
         })
         .where(eq(orders.id, input.orderId));
+
+      const [orderStore] = await tx
+        .select({ name: stores.name, phoneE164: stores.phoneE164 })
+        .from(stores)
+        .where(eq(stores.id, order.store_id))
+        .limit(1);
+      if (orderStore) {
+        await enqueueNotification(
+          tx,
+          input.orderId,
+          "delivered",
+          orderStore.phoneE164,
+          notificationMessage(getDictionary(ctx.locale), "delivered", orderStore.name),
+        );
+      }
 
       return { orderId: input.orderId, alreadyDelivered: false };
     });

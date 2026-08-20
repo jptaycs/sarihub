@@ -28,6 +28,8 @@ import {
   sukiLedger,
 } from "~/server/db/schema";
 import { importCatalogCsv } from "~/server/services/catalogImport";
+import { notificationMessage } from "~/server/services/notificationMessage";
+import { enqueueNotification } from "~/server/services/notifications";
 import { adminProcedure, router } from "~/server/trpc/init";
 
 /** The Manila-midnight instant for "today" — the delivery day the board shows. */
@@ -122,8 +124,8 @@ const ordersAdminRouter = router({
     const transition = STATUS_TRANSITIONS[input.status];
 
     return ctx.db.transaction(async (tx) => {
-      const rows = await tx.execute<{ status: string }>(
-        sql`SELECT status FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
+      const rows = await tx.execute<{ status: string; store_id: string }>(
+        sql`SELECT status, store_id FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
       );
       const order = rows[0];
       const dict = getDictionary(ctx.locale).admin.errors;
@@ -141,6 +143,23 @@ const ordersAdminRouter = router({
         .update(orders)
         .set({ status: input.status, [transition.stamp]: at })
         .where(eq(orders.id, input.orderId));
+
+      if (input.status === "in_transit" || input.status === "delivered") {
+        const [orderStore] = await tx
+          .select({ name: stores.name, phoneE164: stores.phoneE164 })
+          .from(stores)
+          .where(eq(stores.id, order.store_id))
+          .limit(1);
+        if (orderStore) {
+          await enqueueNotification(
+            tx,
+            input.orderId,
+            input.status === "in_transit" ? "out_for_delivery" : "delivered",
+            orderStore.phoneE164,
+            notificationMessage(getDictionary(ctx.locale), input.status === "in_transit" ? "out_for_delivery" : "delivered", orderStore.name),
+          );
+        }
+      }
 
       return { orderId: input.orderId, status: input.status };
     });

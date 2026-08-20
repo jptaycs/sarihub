@@ -20,6 +20,8 @@ import { getDictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import type { PlaceOrderInput } from "~/lib/schemas/order";
+import { notificationMessage } from "./notificationMessage";
+import { enqueueNotification } from "./notifications";
 
 type Db = typeof defaultDb;
 
@@ -223,6 +225,14 @@ export async function placeOrder(
         submittedAt,
       })
       .returning({ id: orders.id });
+
+    await enqueueNotification(
+      tx,
+      order!.id,
+      "confirmed",
+      store.phoneE164,
+      notificationMessage(getDictionary(locale), "confirmed", store.name),
+    );
 
     await tx.insert(orderItems).values(
       lines.map((l) => ({
