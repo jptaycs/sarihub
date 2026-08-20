@@ -3,6 +3,7 @@ export * from "./routes";
 export * from "./stores";
 export * from "./catalog";
 export * from "./orders";
+export * from "./notifications";
 export * from "./suki";
 export * from "./inventory";
 export * from "./staff";
