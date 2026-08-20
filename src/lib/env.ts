@@ -5,6 +5,7 @@ const schema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(10),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(10).optional(),
   DATABASE_URL: z.string().min(10).optional(),
+  SEMAPHORE_API_KEY: z.string().min(10).optional(),
 });
 
 type Env = z.infer<typeof schema>;
@@ -23,6 +24,7 @@ export const env = new Proxy({} as Env, {
         NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
         DATABASE_URL: process.env.DATABASE_URL,
+        SEMAPHORE_API_KEY: process.env.SEMAPHORE_API_KEY,
       });
       if (!parsed.success) {
         const issues = parsed.error.issues
