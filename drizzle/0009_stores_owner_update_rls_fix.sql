@@ -1,0 +1,13 @@
+-- Fix: "stores_owner_update" (0000_heavy_thunderball_rls.sql) let an owner
+-- UPDATE *any* column on their own store row via a raw PostgREST call — the
+-- USING/WITH CHECK only checked owner_user_id = auth.uid(), no column
+-- allowlist. That includes suki_limit_centavos, route_id, stop_order, lat,
+-- lng — every one of them admin-only in the app. All app writes to `stores`
+-- go through tRPC/service_role (src/server/routers/admin.ts), never the
+-- Supabase client directly, so this policy has no legitimate caller today —
+-- drop it rather than trying to allowlist columns (Postgres RLS can't scope
+-- WITH CHECK by column; that needs a trigger, more machinery than this
+-- policy has any current reason to justify). If an owner-editable-fields
+-- feature shows up later, give it a fresh, narrowly-scoped policy instead of
+-- restoring this one.
+DROP POLICY IF EXISTS "stores_owner_update" ON "stores";
