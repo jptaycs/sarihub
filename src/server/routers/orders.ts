@@ -36,58 +36,74 @@ export const ordersRouter = router({
     return result;
   }),
 
-  /** The store's recent orders, newest first, items inlined. */
-  list: protectedProcedure.query(async ({ ctx }) => {
-    const [store] = await ctx.db
-      .select({ id: stores.id })
-      .from(stores)
-      .where(eq(stores.ownerUserId, ctx.user.id))
-      .limit(1);
-    if (!store) return [];
+  /**
+   * The store's orders, newest first, items inlined, paginated so an active
+   * store (one order a night) doesn't lose access to its own history after
+   * ~3 weeks — `cursor` is an offset into that same newest-first ordering.
+   */
+  list: protectedProcedure
+    .input(z.object({ cursor: z.number().int().min(0).optional() }))
+    .query(async ({ ctx, input }) => {
+      const PAGE_SIZE = 20;
+      const offset = input.cursor ?? 0;
 
-    const orderRows = await ctx.db
-      .select({
-        id: orders.id,
-        status: orders.status,
-        totalCentavos: orders.totalCentavos,
-        deliverOn: orders.deliverOn,
-        submittedAt: orders.submittedAt,
-        cancelledReason: orders.cancelledReason,
-      })
-      .from(orders)
-      .where(eq(orders.storeId, store.id))
-      .orderBy(desc(orders.createdAt))
-      .limit(20);
-    if (orderRows.length === 0) return [];
+      const [store] = await ctx.db
+        .select({ id: stores.id })
+        .from(stores)
+        .where(eq(stores.ownerUserId, ctx.user.id))
+        .limit(1);
+      if (!store) return { orders: [], nextCursor: undefined };
 
-    const itemRows = await ctx.db
-      .select({
-        orderId: orderItems.orderId,
-        nameTl: products.nameTl,
-        unitLabelTl: productUnits.labelTl,
-        quantity: orderItems.quantity,
-        lockedTotalCentavos: orderItems.lockedTotalCentavos,
-        cancelledItem: orderItems.cancelledItem,
-      })
-      .from(orderItems)
-      .innerJoin(products, eq(products.id, orderItems.productId))
-      .innerJoin(productUnits, eq(productUnits.id, orderItems.productUnitId))
-      .where(
-        inArray(
-          orderItems.orderId,
-          orderRows.map((o) => o.id),
-        ),
-      );
+      // One extra row, unreturned, just to know whether another page exists.
+      const page = await ctx.db
+        .select({
+          id: orders.id,
+          status: orders.status,
+          totalCentavos: orders.totalCentavos,
+          deliverOn: orders.deliverOn,
+          submittedAt: orders.submittedAt,
+          cancelledReason: orders.cancelledReason,
+        })
+        .from(orders)
+        .where(eq(orders.storeId, store.id))
+        .orderBy(desc(orders.createdAt))
+        .limit(PAGE_SIZE + 1)
+        .offset(offset);
+      const hasMore = page.length > PAGE_SIZE;
+      const orderRows = hasMore ? page.slice(0, PAGE_SIZE) : page;
+      if (orderRows.length === 0) return { orders: [], nextCursor: undefined };
 
-    const itemsByOrder = new Map<string, typeof itemRows>();
-    for (const item of itemRows) {
-      const list = itemsByOrder.get(item.orderId) ?? [];
-      list.push(item);
-      itemsByOrder.set(item.orderId, list);
-    }
+      const itemRows = await ctx.db
+        .select({
+          orderId: orderItems.orderId,
+          nameTl: products.nameTl,
+          unitLabelTl: productUnits.labelTl,
+          quantity: orderItems.quantity,
+          lockedTotalCentavos: orderItems.lockedTotalCentavos,
+          cancelledItem: orderItems.cancelledItem,
+        })
+        .from(orderItems)
+        .innerJoin(products, eq(products.id, orderItems.productId))
+        .innerJoin(productUnits, eq(productUnits.id, orderItems.productUnitId))
+        .where(
+          inArray(
+            orderItems.orderId,
+            orderRows.map((o) => o.id),
+          ),
+        );
 
-    return orderRows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] }));
-  }),
+      const itemsByOrder = new Map<string, typeof itemRows>();
+      for (const item of itemRows) {
+        const list = itemsByOrder.get(item.orderId) ?? [];
+        list.push(item);
+        itemsByOrder.set(item.orderId, list);
+      }
+
+      return {
+        orders: orderRows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] })),
+        nextCursor: hasMore ? offset + PAGE_SIZE : undefined,
+      };
+    }),
 
   /**
    * One order in full: locked line items, lifecycle timestamps for the status

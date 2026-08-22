@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
@@ -29,7 +30,10 @@ function statusLabel(dict: Dictionary): Record<string, { text: string; className
 export function OrdersClient() {
   const dict = useDictionary();
   const { locale } = useLocale();
-  const ordersQuery = trpc.orders.list.useQuery();
+  const ordersQuery = trpc.orders.list.useInfiniteQuery(
+    {},
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  );
 
   if (ordersQuery.isLoading) {
     return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
@@ -40,7 +44,7 @@ export function OrdersClient() {
     );
   }
 
-  const orders = ordersQuery.data ?? [];
+  const orders = ordersQuery.data?.pages.flatMap((p) => p.orders) ?? [];
   if (orders.length === 0) {
     return (
       <div className="pt-10 text-center">
@@ -55,39 +59,54 @@ export function OrdersClient() {
   const statuses = statusLabel(dict);
 
   return (
-    <Card>
-      {orders.map((order) => {
-        const status = statuses[order.status] ?? statuses.draft!;
-        return (
-          <Link
-            key={order.id}
-            href={`/orders/${order.id}`}
-            className="hair-b block px-4 py-3.5 last:border-b-0 active:bg-surface-2"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[14px] font-medium">
-                {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn, locale) })}
-              </span>
-              <span
-                className={cn(
-                  "rounded-pill px-2.5 py-1 text-xs font-medium",
-                  status.className,
-                )}
-              >
-                {status.text}
-              </span>
-            </div>
-            <div className="mt-1.5 text-[13px] text-ink-2">
-              {order.items
-                .map((i) => `${i.nameTl} ${i.unitLabelTl} ×${i.quantity}`)
-                .join(" · ")}
-            </div>
-            <div className="price mt-1.5 text-[14px] font-medium">
-              {formatPeso(order.totalCentavos)}
-            </div>
-          </Link>
-        );
-      })}
-    </Card>
+    <>
+      <Card>
+        {orders.map((order) => {
+          const status = statuses[order.status] ?? statuses.draft!;
+          return (
+            <Link
+              key={order.id}
+              href={`/orders/${order.id}`}
+              className="hair-b block px-4 py-3.5 last:border-b-0 active:bg-surface-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[14px] font-medium">
+                  {interpolate(dict.common.deliverOnLabel, {
+                    date: formatManilaDate(order.deliverOn, locale),
+                  })}
+                </span>
+                <span
+                  className={cn(
+                    "rounded-pill px-2.5 py-1 text-xs font-medium",
+                    status.className,
+                  )}
+                >
+                  {status.text}
+                </span>
+              </div>
+              <div className="mt-1.5 text-[13px] text-ink-2">
+                {order.items
+                  .map((i) => `${i.nameTl} ${i.unitLabelTl} ×${i.quantity}`)
+                  .join(" · ")}
+              </div>
+              <div className="price mt-1.5 text-[14px] font-medium">
+                {formatPeso(order.totalCentavos)}
+              </div>
+            </Link>
+          );
+        })}
+      </Card>
+      {ordersQuery.hasNextPage && (
+        <Button
+          variant="secondary"
+          block
+          className="mt-3"
+          disabled={ordersQuery.isFetchingNextPage}
+          onClick={() => void ordersQuery.fetchNextPage()}
+        >
+          {ordersQuery.isFetchingNextPage ? dict.orders.loadingMore : dict.orders.loadMore}
+        </Button>
+      )}
+    </>
   );
 }
