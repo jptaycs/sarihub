@@ -35,11 +35,16 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/verify") || pathname.startsWith("/auth");
   // /offline stays public so the service worker can precache it before sign-in.
-  // /api/cron/* routes handle their own auth via bearer token
+  // Every /api/* route enforces its own auth and returns its own response
+  // format (tRPC's protectedProcedure throws a proper JSON UNAUTHORIZED;
+  // /api/cron checks its bearer token) — redirecting them here instead would
+  // hand a client expecting JSON the /login page's HTML (fetch follows
+  // redirects by default), which surfaces as a confusing parse error instead
+  // of a clean "please sign in again".
   const isPublic =
     isAuthRoute ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/") ||
     pathname === "/favicon.ico" ||
     pathname === "/offline";
 
