@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { CircleUser } from "lucide-react";
+import dynamic from "next/dynamic";
+import { CircleUser, Navigation } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
@@ -10,6 +11,7 @@ import { Card } from "~/components/ui/Card";
 import { cn } from "~/lib/cn";
 import { formatManilaDate } from "~/lib/datetime";
 import { formatPeso, formatPhone } from "~/lib/format";
+import { googleMapsDirectionsUrl } from "~/lib/geo";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { uploadPod } from "~/lib/supabase/storage";
@@ -17,6 +19,10 @@ import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
 import { SignaturePad, signatureBlob } from "./SignaturePad";
+
+const RouteMap = dynamic(() => import("~/components/map/RouteMap").then((m) => m.RouteMap), {
+  ssr: false,
+});
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type RoutesToday = RouterOutputs["driver"]["routesToday"];
@@ -112,6 +118,14 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
 
   return (
     <div>
+      <RouteMap
+        stops={stops.map((s) => ({
+          id: s.id,
+          lat: s.lat,
+          lng: s.lng,
+          done: s.status === "delivered" || s.status === "settled",
+        }))}
+      />
       <div className="mb-3 flex items-center justify-between rounded-md bg-surface-2 px-3.5 py-2.5 text-[13px]">
         <span className="text-ink-2">
           {route?.name}
@@ -155,6 +169,20 @@ function StopCard(props: { stop: Stop; index: number }) {
             <a href={`tel:${stop.phoneE164}`} className="font-medium text-action">
               {formatPhone(stop.phoneE164)}
             </a>
+            {stop.lat != null && stop.lng != null && (
+              <>
+                {" · "}
+                <a
+                  href={googleMapsDirectionsUrl(stop.lat, stop.lng)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 font-medium text-action"
+                >
+                  <Navigation size={12} strokeWidth={2} />
+                  {dict.driver.navigate}
+                </a>
+              </>
+            )}
           </div>
           {stop.addressLine && <div className="text-[13px] text-ink-2">{stop.addressLine}</div>}
         </div>

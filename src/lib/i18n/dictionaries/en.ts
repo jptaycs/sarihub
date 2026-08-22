@@ -294,6 +294,7 @@ export const en: Dictionary = {
       address: "Address",
       route: "Route",
       stopOrder: "Stop number on the route",
+      location: "Location (for the driver's map)",
       sukiLimit: "Suki limit (₱)",
       sukiLimitAria: "Suki limit in pesos",
       invalidAmount: "That amount isn't right.",
@@ -319,9 +320,19 @@ export const en: Dictionary = {
     doneButton: "Done — delivered",
     submitting: "One moment…",
     back: "Back",
+    navigate: "Navigate",
+    routeMapEmpty: "No pinned locations on this route yet.",
     errors: {
       notDeliverable: "This order can no longer be delivered.",
     },
+  },
+  map: {
+    pickerHint: "Tap or drag the pin to set the location.",
+    clear: "Clear pin",
+    noToken: "No map configured — enter coordinates manually.",
+    latLabel: "Latitude",
+    lngLabel: "Longitude",
+    invalidCoords: "Those coordinates aren't right.",
   },
   signaturePad: {
     clear: "Clear",

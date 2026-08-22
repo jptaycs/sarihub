@@ -57,6 +57,8 @@ export const driverRouter = router({
           ownerName: stores.ownerName,
           phoneE164: stores.phoneE164,
           addressLine: stores.addressLine,
+          lat: stores.lat,
+          lng: stores.lng,
           stopOrder: stores.stopOrder,
         })
         .from(orders)

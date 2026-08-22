@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
 
 import { centavos, idColumn, timestampColumns } from "./_shared";
 import { routes } from "./routes";
@@ -12,6 +12,9 @@ export const stores = pgTable("stores", {
   ownerName: text("owner_name").notNull(),
   phoneE164: varchar("phone_e164", { length: 16 }).notNull().unique(),
   addressLine: text("address_line"),
+  /** Delivery pin, set by admin from a map. Null = not pinned yet; no map/navigate for this stop. */
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
   routeId: uuid("route_id").references(() => routes.id, { onDelete: "set null" }),
   /** Position along the route's morning run. Null = not sequenced yet; sorts last. */
   stopOrder: integer("stop_order"),

@@ -7,6 +7,7 @@ const schema = z.object({
   DATABASE_URL: z.string().min(10).optional(),
   SEMAPHORE_API_KEY: z.string().min(10).optional(),
   CRON_SECRET: z.string().min(16).optional(),
+  NEXT_PUBLIC_MAPBOX_TOKEN: z.string().min(10).optional(),
 });
 
 type Env = z.infer<typeof schema>;
@@ -27,6 +28,7 @@ export const env = new Proxy({} as Env, {
         DATABASE_URL: process.env.DATABASE_URL,
         SEMAPHORE_API_KEY: process.env.SEMAPHORE_API_KEY,
         CRON_SECRET: process.env.CRON_SECRET,
+        NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
       });
       if (!parsed.success) {
         const issues = parsed.error.issues

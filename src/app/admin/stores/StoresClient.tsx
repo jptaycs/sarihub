@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import type { inferRouterOutputs } from "@trpc/server";
 
+import type { LatLng } from "~/components/map/MapPicker";
 import { Button } from "~/components/ui/Button";
 import { Card, CardRow } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
@@ -21,6 +23,10 @@ import {
 } from "~/lib/schemas/admin";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
+
+const MapPicker = dynamic(() => import("~/components/map/MapPicker").then((m) => m.MapPicker), {
+  ssr: false,
+});
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type StoreList = RouterOutputs["admin"]["stores"]["list"];
@@ -181,8 +187,10 @@ function CreateStoreForm(props: {
   const [limitDraft, setLimitDraft] = useState("2000");
   const form = useForm<CreateStoreInput>({
     resolver: zodResolver(createStoreInput),
-    defaultValues: { routeId: null, stopOrder: null, sukiLimitCentavos: 200000 },
+    defaultValues: { routeId: null, stopOrder: null, lat: null, lng: null, sukiLimitCentavos: 200000 },
   });
+  const lat = form.watch("lat");
+  const lng = form.watch("lng");
 
   return (
     <form
@@ -230,6 +238,16 @@ function CreateStoreForm(props: {
         }}
         error={form.formState.errors.sukiLimitCentavos ? dict.admin.stores.invalidAmount : undefined}
       />
+      <div className="sm:col-span-2">
+        <span className="mb-1 block text-[13px] text-ink-2">{dict.admin.stores.location}</span>
+        <MapPicker
+          value={lat != null && lng != null ? { lat, lng } : null}
+          onChange={(v: LatLng | null) => {
+            form.setValue("lat", v?.lat ?? null);
+            form.setValue("lng", v?.lng ?? null);
+          }}
+        />
+      </div>
       <div className="flex gap-2 sm:col-span-2">
         <Button variant="secondary" onClick={props.onDone} disabled={create.isPending}>
           {dict.admin.stores.cancel}
@@ -271,11 +289,15 @@ function UpdateStoreForm(props: {
       name: store.name,
       ownerName: store.ownerName,
       addressLine: store.addressLine ?? undefined,
+      lat: store.lat,
+      lng: store.lng,
       routeId: store.routeId,
       stopOrder: store.stopOrder,
       sukiLimitCentavos: Number(store.sukiLimitCentavos),
     },
   });
+  const lat = form.watch("lat");
+  const lng = form.watch("lng");
 
   return (
     <form
@@ -321,6 +343,16 @@ function UpdateStoreForm(props: {
         }}
         error={form.formState.errors.sukiLimitCentavos ? dict.admin.stores.invalidAmount : undefined}
       />
+      <div className="sm:col-span-2">
+        <span className="mb-1 block text-[13px] text-ink-2">{dict.admin.stores.location}</span>
+        <MapPicker
+          value={lat != null && lng != null ? { lat, lng } : null}
+          onChange={(v: LatLng | null) => {
+            form.setValue("lat", v?.lat ?? null);
+            form.setValue("lng", v?.lng ?? null);
+          }}
+        />
+      </div>
       <div className="flex items-end text-[13px] text-ink-3">
         {interpolate(dict.admin.stores.mobileNote, { phone: formatPhone(store.phoneE164) })}
       </div>

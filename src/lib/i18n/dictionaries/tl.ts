@@ -297,6 +297,7 @@ export const tl = {
       address: "Address",
       route: "Ruta",
       stopOrder: "Pang-ilang hinto sa ruta",
+      location: "Lokasyon (para sa mapa ng driver)",
       sukiLimit: "Suki limit (₱)",
       sukiLimitAria: "Suki limit sa pesos",
       invalidAmount: "Hindi tamang halaga.",
@@ -322,9 +323,19 @@ export const tl = {
     doneButton: "Tapos — naihatid na",
     submitting: "Sandali po…",
     back: "Bumalik",
+    navigate: "Ituro ang daan",
+    routeMapEmpty: "Wala pang naka-pin na lokasyon sa rutang ito.",
     errors: {
       notDeliverable: "Hindi na deliverable ang order na ito.",
     },
+  },
+  map: {
+    pickerHint: "Tapikin o i-drag ang pin para itakda ang lokasyon.",
+    clear: "Alisin ang naka-pin",
+    noToken: "Walang naka-configure na mapa — ipasok na lang ang coordinates.",
+    latLabel: "Latitude",
+    lngLabel: "Longitude",
+    invalidCoords: "Hindi tamang coordinates.",
   },
   signaturePad: {
     clear: "Burahin",

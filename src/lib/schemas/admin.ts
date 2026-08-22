@@ -65,6 +65,9 @@ export const createStoreInput = z.object({
   /** Any PH-mobile spelling; parsed to E.164 server-side. */
   phone: z.string().trim().min(1, "Kailangan ang numero."),
   addressLine: z.string().trim().max(300).optional(),
+  /** Delivery pin set via the map picker; null = not pinned yet. */
+  lat: z.number().min(-90).max(90).nullable(),
+  lng: z.number().min(-180).max(180).nullable(),
   routeId: z.string().uuid().nullable(),
   /** Position along the route's morning run; null = not sequenced yet. */
   stopOrder: z.number().int().min(1).max(999).nullable(),
@@ -77,6 +80,8 @@ export const updateStoreInput = z.object({
   name: z.string().trim().min(1).max(120),
   ownerName: z.string().trim().min(1).max(120),
   addressLine: z.string().trim().max(300).optional(),
+  lat: z.number().min(-90).max(90).nullable(),
+  lng: z.number().min(-180).max(180).nullable(),
   routeId: z.string().uuid().nullable(),
   stopOrder: z.number().int().min(1).max(999).nullable(),
   sukiLimitCentavos: z.number().int().min(0).max(100_000_000),
