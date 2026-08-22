@@ -17,6 +17,7 @@ import {
 } from "~/server/db/schema";
 import { formatManila, now } from "~/lib/datetime";
 import { cutoffInstant, nextDeliveryDate } from "~/lib/deliverySchedule";
+import { formatPeso } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
@@ -153,29 +154,6 @@ export async function placeOrder(
   const totalCentavos = lines.reduce((sum, l) => sum + l.lockedTotalCentavos, 0n);
   const deliverOn = nextDeliveryDate(route, submittedAt);
 
-  // A unit the buyer couldn't source can't ride the truck this order targets.
-  const stockoutRows = await db
-    .select({ productUnitId: unitStockouts.productUnitId })
-    .from(unitStockouts)
-    .where(
-      and(
-        inArray(unitStockouts.productUnitId, unitIds),
-        eq(unitStockouts.stockoutOn, formatManila(deliverOn, "yyyy-MM-dd")),
-      ),
-    );
-  if (stockoutRows.length > 0) {
-    const stockedOut = new Set(stockoutRows.map((r) => r.productUnitId));
-    const names = unitRows
-      .filter((u) => stockedOut.has(u.unitId))
-      .map((u) => `${u.nameTl} (${u.unitLabelTl})`)
-      .join(", ");
-    return {
-      ok: false,
-      reason: "out_of_stock",
-      message: interpolate(dict.outOfStock, { names }),
-    };
-  }
-
   return db.transaction(async (tx) => {
     // Retried submit with the same key returns the original order untouched.
     const [existing] = await tx
@@ -196,6 +174,37 @@ export async function placeOrder(
       };
     }
 
+    // Serializes against markUnitOutOfStock's own advisory lock on each unit
+    // id (sorted to avoid deadlocking a multi-unit order against concurrent
+    // single-unit stockout marks), so the check below can't pass in the gap
+    // right before a buyer marks one of these units unsourceable.
+    for (const unitId of [...unitIds].sort()) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${unitId}))`);
+    }
+
+    // A unit the buyer couldn't source can't ride the truck this order targets.
+    const stockoutRows = await tx
+      .select({ productUnitId: unitStockouts.productUnitId })
+      .from(unitStockouts)
+      .where(
+        and(
+          inArray(unitStockouts.productUnitId, unitIds),
+          eq(unitStockouts.stockoutOn, formatManila(deliverOn, "yyyy-MM-dd")),
+        ),
+      );
+    if (stockoutRows.length > 0) {
+      const stockedOut = new Set(stockoutRows.map((r) => r.productUnitId));
+      const names = unitRows
+        .filter((u) => stockedOut.has(u.unitId))
+        .map((u) => `${u.nameTl} (${u.unitLabelTl})`)
+        .join(", ");
+      return {
+        ok: false as const,
+        reason: "out_of_stock" as const,
+        message: interpolate(dict.outOfStock, { names }),
+      };
+    }
+
     // Lock the store row so concurrent submits can't both pass the suki check.
     const [locked] = await tx
       .execute<{ suki_balance_centavos: string; suki_limit_centavos: string }>(
@@ -205,11 +214,12 @@ export async function placeOrder(
     const limit = BigInt(locked!.suki_limit_centavos);
     const available = limit - balance;
     if (totalCentavos > available) {
+      const availableCentavos = available > 0n ? available : 0n;
       return {
         ok: false as const,
         reason: "over_suki_limit" as const,
-        message: dict.overSukiLimit,
-        availableCentavos: available > 0n ? available : 0n,
+        message: interpolate(dict.overSukiLimit, { available: formatPeso(availableCentavos) }),
+        availableCentavos,
       };
     }
 

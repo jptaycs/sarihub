@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
 import { getDictionary } from "~/lib/i18n/dictionaries";
@@ -8,6 +8,7 @@ import { interpolate } from "~/lib/i18n/interpolate";
 import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import { db as defaultDb } from "~/server/db";
 import {
+  notificationQueue,
   orderItems,
   orders,
   productUnits,
@@ -54,6 +55,13 @@ export async function markUnitOutOfStock(
   }
 
   return db.transaction(async (tx) => {
+    // Serializes against placeOrder's own advisory lock on this unit id, so an
+    // order can't be placed for a unit in the exact instant it's being marked
+    // out of stock (or vice versa) — whichever transaction gets here first
+    // fully completes before the other proceeds, closing the race between the
+    // stockout check in placeOrder and this insert.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${productUnitId}))`);
+
     const inserted = await tx
       .insert(unitStockouts)
       .values({ productUnitId, stockoutOn: dayStr, markedBy: buyerUserId })
@@ -65,6 +73,9 @@ export async function markUnitOutOfStock(
     }
 
     // Lock the affected item + order rows so packing can't race the recompute.
+    // Reaches `packed` orders too, not just `submitted` — the goods haven't
+    // left on the truck yet (that's `in_transit`), so the line can still be
+    // pulled and refunded.
     const affected = await tx.execute<{
       item_id: string;
       order_id: string;
@@ -76,7 +87,7 @@ export async function markUnitOutOfStock(
           JOIN orders o ON o.id = oi.order_id
           WHERE oi.product_unit_id = ${productUnitId}
             AND oi.cancelled_item = false
-            AND o.status = 'submitted'
+            AND o.status IN ('submitted', 'packed')
             AND o.deliver_on = ${dayStart.toISOString()}
           FOR UPDATE OF oi, o`,
     );
@@ -117,6 +128,40 @@ export async function markUnitOutOfStock(
         orderId,
         reason: interpolate(dict.oosLedgerReason, { name: unit.nameTl, unit: unit.labelTl }),
       });
+    }
+
+    // An order this cascade emptied out entirely (every line cancelled) has
+    // nothing left to pack or deliver — auto-cancel it so it doesn't linger on
+    // the admin kanban or a driver's stop list with a zero total.
+    const orderIds = [...byOrder.keys()];
+    const remaining = await tx
+      .select({ orderId: orderItems.orderId, count: sql<number>`count(*)::int` })
+      .from(orderItems)
+      .where(and(inArray(orderItems.orderId, orderIds), eq(orderItems.cancelledItem, false)))
+      .groupBy(orderItems.orderId);
+    const stillHasItems = new Set(remaining.map((r) => r.orderId));
+    const emptiedOrderIds = orderIds.filter((id) => !stillHasItems.has(id));
+
+    if (emptiedOrderIds.length > 0) {
+      await tx
+        .update(orders)
+        .set({
+          status: "cancelled",
+          cancelledAt: at,
+          cancelledReason: dict.autoCancelledReasonText,
+        })
+        .where(inArray(orders.id, emptiedOrderIds));
+
+      // Mirrors owner cancellation: a fully-emptied order should never send
+      // its already-queued "confirmed" SMS if the cron hasn't picked it up yet.
+      await tx
+        .delete(notificationQueue)
+        .where(
+          and(
+            inArray(notificationQueue.orderId, emptiedOrderIds),
+            eq(notificationQueue.status, "pending"),
+          ),
+        );
     }
 
     return { ok: true as const, alreadyMarked: false, affectedOrders: byOrder.size };
