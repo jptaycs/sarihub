@@ -4,9 +4,9 @@ import { env } from "~/lib/env";
 import { db } from "~/server/db";
 import { processNotificationQueue } from "~/server/services/notifications";
 
-// 50-row batch cap in processNotificationQueue × up to ~10s per send (see
-// sms.ts's fetch timeout) could approach Vercel's default limit on a large
-// backlog — set an explicit budget rather than relying on the platform default.
+// processNotificationQueue caps itself at a 45s wall-clock budget (see its
+// WALL_CLOCK_BUDGET_MS) to leave headroom under this — set explicitly rather
+// than relying on the platform default.
 export const maxDuration = 60;
 
 /**
