@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
@@ -106,6 +106,42 @@ export function HomeClient() {
   const cartTotal = cartLines.reduce((sum, l) => sum + l.totalCentavos, 0n);
   const cartCount = cartLines.reduce((sum, l) => sum + l.quantity, 0);
 
+  /** All catalog units regardless of price/stock, just for naming a removed line. */
+  const allUnitIndex = useMemo(() => {
+    const map = new Map<string, { product: CatalogProduct; labelTl: string }>();
+    for (const p of products) {
+      for (const u of p.units) {
+        map.set(u.id, { product: p, labelTl: u.labelTl });
+      }
+    }
+    return map;
+  }, [products]);
+
+  const [removedNotice, setRemovedNotice] = useState<string[] | null>(null);
+
+  // A cart line can go stale while the owner is browsing — the buyer marks it
+  // out of stock, or its price expires — with no error, since nothing was
+  // submitted yet. Silently dropping it from cartLines (via unitIndex not
+  // having it) left the owner with a shrinking total and no explanation.
+  // Prune it from the cart and say why, instead.
+  useEffect(() => {
+    // Guard against the catalog's first load: `products` (and so `unitIndex`)
+    // is `[]` until catalogQuery.data actually arrives, which would otherwise
+    // look identical to "every cart line just went stale" and wipe a
+    // just-hydrated cart on every page load.
+    if (!catalogQuery.data) return;
+    const staleIds = Object.keys(cart.quantities).filter((id) => !unitIndex.has(id));
+    if (staleIds.length === 0) return;
+    const names = staleIds
+      .map((id) => allUnitIndex.get(id))
+      .filter((u): u is NonNullable<typeof u> => u !== undefined)
+      .map((u) => `${u.product.nameTl} (${u.labelTl})`);
+    staleIds.forEach((id) => setQuantity(id, 0));
+    if (names.length > 0) setRemovedNotice(names);
+    // setQuantity is a stable useCallback; omitting it here would be fine too,
+    // but including it documents that pruning is the effect's real dependency.
+  }, [cart.quantities, unitIndex, allUnitIndex, setQuantity, catalogQuery.data]);
+
   if (storeQuery.isLoading || catalogQuery.isLoading) {
     return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
   }
@@ -171,6 +207,21 @@ export function HomeClient() {
           />
         ))}
       </div>
+
+      {removedNotice && (
+        <div className="mt-3 flex items-start justify-between gap-2 rounded-md bg-warning-soft px-3.5 py-2.5 text-[13px] text-warning">
+          <span>
+            {interpolate(dict.home.cartItemsRemovedNotice, { names: removedNotice.join(", ") })}
+          </span>
+          <button
+            type="button"
+            onClick={() => setRemovedNotice(null)}
+            className="shrink-0 font-medium underline"
+          >
+            {dict.home.cartItemsRemovedDismiss}
+          </button>
+        </div>
+      )}
 
       <div className="mt-2 flex-1">
         {visibleProducts.length === 0 && (
