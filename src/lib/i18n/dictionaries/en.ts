@@ -72,6 +72,8 @@ export const en: Dictionary = {
     increaseAria: "Increase {name} {unit}",
     deliveryToday: "later this morning",
     deliveryTomorrow: "tomorrow morning",
+    cartItemsRemovedNotice: "Removed from your order — the price or stock changed: {names}",
+    cartItemsRemovedDismiss: "Got it",
   },
   cart: {
     placedTitle: "Order placed!",
@@ -89,6 +91,8 @@ export const en: Dictionary = {
     back: "← Back to store",
     empty: "You don't have any orders yet.",
     startOrdering: "Start ordering →",
+    loadMore: "Show older orders",
+    loadingMore: "Loading…",
     statusDraft: "Draft",
     statusSubmitted: "Submitted",
     statusPacked: "Packed",
@@ -103,7 +107,7 @@ export const en: Dictionary = {
       unknownItem: "An item in the order is no longer listed. Please refresh the app.",
       noPriceToday: "No price today for: {names}. Remove it from the order first.",
       outOfStock: "Out of stock today: {names}. Remove it from the order first.",
-      overSukiLimit: "This order is over your suki limit.",
+      overSukiLimit: "This order is over your suki limit. You have {available} left on your tab.",
       notFound: "This order couldn't be found.",
       alreadyCancelled: "This order is already cancelled.",
       notCancellable: "This can no longer be cancelled — it's already being packed.",
@@ -171,6 +175,7 @@ export const en: Dictionary = {
     errors: {
       unknownUnit: "That item couldn't be found.",
       oosLedgerReason: "Out of stock: {name} ({unit})",
+      autoCancelledReasonText: "Cancelled — every item in the order ran out",
     },
   },
   admin: {
@@ -208,6 +213,9 @@ export const en: Dictionary = {
       advanceToPacked: "→ Packed",
       advanceToInTransit: "→ In transit",
       advanceToDelivered: "→ Delivered",
+      confirmPrompt: "Advance to '{label}'? This can't be undone.",
+      confirmYes: "Yes, advance",
+      confirmNo: "Not yet",
     },
     catalog: {
       title: "Catalog",

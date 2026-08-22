@@ -75,6 +75,8 @@ export const tl = {
     increaseAria: "Dagdagan ang {name} {unit}",
     deliveryToday: "mamayang umaga",
     deliveryTomorrow: "bukas ng umaga",
+    cartItemsRemovedNotice: "Inalis sa order — nagbago ang presyo o naubos: {names}",
+    cartItemsRemovedDismiss: "Ok, gets ko",
   },
   cart: {
     placedTitle: "Naipasa na po ang order!",
@@ -92,6 +94,8 @@ export const tl = {
     back: "← Balik sa tindahan",
     empty: "Wala pa po kayong order.",
     startOrdering: "Mag-order na →",
+    loadMore: "Ipakita pa ang mas lumang order",
+    loadingMore: "Nilo-load po…",
     statusDraft: "Draft",
     statusSubmitted: "Naipasa",
     statusPacked: "Nakahanda",
@@ -106,7 +110,7 @@ export const tl = {
       unknownItem: "May item sa order na wala na sa listahan. I-refresh po ang app.",
       noPriceToday: "Walang presyo ngayon para sa: {names}. Alisin muna po sa order.",
       outOfStock: "Naubos po ngayon: {names}. Alisin muna po sa order.",
-      overSukiLimit: "Lampas na po sa suki limit ninyo ang order na ito.",
+      overSukiLimit: "Lampas na po sa suki limit ninyo ang order na ito. Natitira pang {available} sa tab ninyo.",
       notFound: "Hindi po mahanap ang order.",
       alreadyCancelled: "Kanselado na po ang order na ito.",
       notCancellable: "Hindi na po pwedeng kanselahin — inihahanda na ang order.",
@@ -174,6 +178,7 @@ export const tl = {
     errors: {
       unknownUnit: "Hindi po mahanap ang item na iyan.",
       oosLedgerReason: "Naubos: {name} ({unit})",
+      autoCancelledReasonText: "Kinansela — naubos lahat ng item sa order",
     },
   },
   admin: {
@@ -211,6 +216,9 @@ export const tl = {
       advanceToPacked: "→ Nakahanda",
       advanceToInTransit: "→ Papunta na",
       advanceToDelivered: "→ Naihatid",
+      confirmPrompt: "Isulong sa '{label}'? Hindi na ito mababawi.",
+      confirmYes: "Oo, isulong",
+      confirmNo: "Huwag muna",
     },
     catalog: {
       title: "Katalogo",
