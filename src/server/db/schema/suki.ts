@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
 
 import { centavos, idColumn, timestampColumns } from "./_shared";
 import { orders } from "./orders";
@@ -24,6 +24,15 @@ export const sukiLedger = pgTable("suki_ledger", {
   /** Optional link to the order this entry came from (for charge entries). */
   orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
   reason: text("reason"),
+  /**
+   * Client-generated, required for admin-entered payment/adjustment rows so
+   * a retry or a fast double-tap can't double-post money — null for rows
+   * inserted by app code that already has its own guard (order charges and
+   * reversals live inside placeOrder's/cancelOrder's own transaction, and
+   * the stockout cascade is naturally idempotent via unit_stockouts'
+   * onConflictDoNothing).
+   */
+  idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
   ...timestampColumns,
 });
 

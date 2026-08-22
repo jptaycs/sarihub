@@ -177,7 +177,11 @@ function OrderCard(props: { order: BoardOrder }) {
   const { order } = props;
   const dict = useDictionary();
   const utils = trpc.useUtils();
+  const [confirming, setConfirming] = useState(false);
   const setStatus = trpc.admin.orders.setStatus.useMutation({
+    onSuccess() {
+      setConfirming(false);
+    },
     onSettled() {
       void utils.admin.orders.board.invalidate();
     },
@@ -199,16 +203,41 @@ function OrderCard(props: { order: BoardOrder }) {
         )}
         {order.hasUnweighedItems && <span title={dict.admin.orders.unweighedTitle}> ±</span>}
       </div>
-      {next && (
+      {next && !confirming && (
         <Button
           variant="secondary"
           block
           className="mt-2.5 h-10 text-[13px]"
-          disabled={setStatus.isPending}
-          onClick={() => setStatus.mutate({ orderId: order.id, status: next.status })}
+          onClick={() => setConfirming(true)}
         >
-          {setStatus.isPending ? dict.admin.orders.updating : next.label}
+          {next.label}
         </Button>
+      )}
+      {next && confirming && (
+        <div className="mt-2.5 rounded-md bg-warning-soft px-2.5 py-2">
+          <p className="text-xs font-medium text-warning">
+            {interpolate(dict.admin.orders.confirmPrompt, { label: next.label.replace(/^→\s*/, "") })}
+          </p>
+          <div className="mt-2 flex gap-1.5">
+            <Button
+              variant="secondary"
+              block
+              className="h-9 text-[13px]"
+              disabled={setStatus.isPending}
+              onClick={() => setConfirming(false)}
+            >
+              {dict.admin.orders.confirmNo}
+            </Button>
+            <Button
+              block
+              className="h-9 text-[13px]"
+              disabled={setStatus.isPending}
+              onClick={() => setStatus.mutate({ orderId: order.id, status: next.status })}
+            >
+              {setStatus.isPending ? dict.admin.orders.updating : dict.admin.orders.confirmYes}
+            </Button>
+          </div>
+        </div>
       )}
       {setStatus.error && (
         <p className="mt-1.5 text-xs font-medium text-danger">{setStatus.error.message}</p>

@@ -308,12 +308,18 @@ const sukiAdminRouter = router({
       });
     }
 
-    await ctx.db.insert(sukiLedger).values({
-      storeId: input.storeId,
-      kind: "payment",
-      amountCentavos: -BigInt(input.amountCentavos),
-      reason: input.note?.length ? input.note : getDictionary(ctx.locale).admin.errors.defaultPaymentReason,
-    });
+    // onConflictDoNothing: a retried/double-tapped submit reuses the same
+    // idempotencyKey, so this never double-posts a payment.
+    await ctx.db
+      .insert(sukiLedger)
+      .values({
+        storeId: input.storeId,
+        kind: "payment",
+        amountCentavos: -BigInt(input.amountCentavos),
+        reason: input.note?.length ? input.note : getDictionary(ctx.locale).admin.errors.defaultPaymentReason,
+        idempotencyKey: input.idempotencyKey,
+      })
+      .onConflictDoNothing();
     return { ok: true };
   }),
 
@@ -333,12 +339,18 @@ const sukiAdminRouter = router({
         });
       }
 
-      await ctx.db.insert(sukiLedger).values({
-        storeId: input.storeId,
-        kind: "adjustment",
-        amountCentavos: BigInt(input.amountCentavos),
-        reason: input.reason,
-      });
+      // onConflictDoNothing: a retried/double-tapped submit reuses the same
+      // idempotencyKey, so this never double-posts an adjustment.
+      await ctx.db
+        .insert(sukiLedger)
+        .values({
+          storeId: input.storeId,
+          kind: "adjustment",
+          amountCentavos: BigInt(input.amountCentavos),
+          reason: input.reason,
+          idempotencyKey: input.idempotencyKey,
+        })
+        .onConflictDoNothing();
       return { ok: true };
     }),
 });

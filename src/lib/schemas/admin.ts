@@ -43,6 +43,8 @@ export const recordPaymentInput = z.object({
   /** Positive centavos; the ledger row is written negative (pays the tab down). */
   amountCentavos: z.number().int().min(1).max(100_000_000),
   note: z.string().trim().max(200).optional(),
+  /** Client-generated, one per form submission. Retrying a flaky/double-tapped submit reuses it. */
+  idempotencyKey: z.string().uuid(),
 });
 export type RecordPaymentInput = z.infer<typeof recordPaymentInput>;
 
@@ -56,6 +58,8 @@ export const recordAdjustmentInput = z.object({
     .max(100_000_000)
     .refine((v) => v !== 0, "Hindi pwedeng zero."),
   reason: z.string().trim().min(3, "Kailangan ang dahilan.").max(200),
+  /** Client-generated, one per form submission. Retrying a flaky/double-tapped submit reuses it. */
+  idempotencyKey: z.string().uuid(),
 });
 export type RecordAdjustmentInput = z.infer<typeof recordAdjustmentInput>;
 

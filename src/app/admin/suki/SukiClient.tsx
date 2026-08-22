@@ -117,6 +117,11 @@ function StoreLedgerPanel(props: { storeId: string }) {
   const [adjustDraft, setAdjustDraft] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustNegative, setAdjustNegative] = useState(true);
+  // One key per logical entry: stable across a retry-after-error (so retrying
+  // a failed/lost-response submit can't double-post), replaced once the
+  // submission actually succeeds and the draft clears for the next entry.
+  const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID());
+  const [adjustKey, setAdjustKey] = useState(() => crypto.randomUUID());
 
   const paymentCentavos = pesosToCentavos(paymentDraft);
   const adjustCentavos = pesosToCentavos(adjustDraft);
@@ -142,8 +147,13 @@ function StoreLedgerPanel(props: { storeId: string }) {
             onClick={() => {
               if (paymentCentavos === null) return;
               payment.mutate(
-                { storeId: props.storeId, amountCentavos: paymentCentavos },
-                { onSuccess: () => setPaymentDraft("") },
+                { storeId: props.storeId, amountCentavos: paymentCentavos, idempotencyKey: paymentKey },
+                {
+                  onSuccess: () => {
+                    setPaymentDraft("");
+                    setPaymentKey(crypto.randomUUID());
+                  },
+                },
               );
             }}
           >
@@ -199,11 +209,13 @@ function StoreLedgerPanel(props: { storeId: string }) {
                 storeId: props.storeId,
                 amountCentavos: adjustNegative ? -adjustCentavos : adjustCentavos,
                 reason: adjustReason.trim(),
+                idempotencyKey: adjustKey,
               },
               {
                 onSuccess: () => {
                   setAdjustDraft("");
                   setAdjustReason("");
+                  setAdjustKey(crypto.randomUUID());
                 },
               },
             );
