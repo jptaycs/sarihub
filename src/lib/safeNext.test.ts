@@ -10,7 +10,7 @@ describe("safeNext", () => {
 
   it("rejects anything that could leave the site", () => {
     expect(safeNext("//evil.com")).toBe("/home");
-    expect(safeNext("/\evil.com")).toBe("/home");
+    expect(safeNext("/\\evil.com")).toBe("/home");
     expect(safeNext("https://evil.com")).toBe("/home");
     expect(safeNext("javascript:alert(1)")).toBe("/home");
     expect(safeNext("/home\n//x")).toBe("/home");

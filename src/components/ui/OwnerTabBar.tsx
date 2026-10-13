@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Route } from "next";
 import { CircleUser, House, LogIn, Receipt } from "lucide-react";
 
 import { cn } from "~/lib/cn";
+import { loginHref } from "~/lib/safeNext";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
 
 /**
@@ -17,10 +19,10 @@ export function OwnerTabBar({ signedIn }: { signedIn: boolean }) {
   const dict = useDictionary();
   const pathname = usePathname();
 
-  const tabs = [
+  const tabs: Array<{ href: Route; match: string; icon: typeof House; label: string }> = [
     { href: "/home", match: "/home", icon: House, label: dict.nav.home },
     {
-      href: signedIn ? "/orders" : `/login?next=${encodeURIComponent("/orders")}`,
+      href: signedIn ? "/orders" : loginHref("/orders"),
       match: "/orders",
       icon: Receipt,
       label: dict.nav.orders,
@@ -28,7 +30,7 @@ export function OwnerTabBar({ signedIn }: { signedIn: boolean }) {
     signedIn
       ? { href: "/profile", match: "/profile", icon: CircleUser, label: dict.nav.profile }
       : {
-          href: `/login?next=${encodeURIComponent("/home")}`,
+          href: loginHref("/home"),
           match: "/login",
           icon: LogIn,
           label: dict.nav.signIn,

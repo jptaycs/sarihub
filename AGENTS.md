@@ -25,7 +25,7 @@ Three product realities that should drive every implementation decision:
 | Store owner (Aling Marisa) | Budget Android, 6", patchy 4G | Ordering at 9 PM while watching TV, often one-handed | Browse → tap unit → tap "Place order". 90 seconds end-to-end. Tagalog-first. |
 | Buyer staff | Phone, wet hands, 5 AM at the palengke | Entering today's prices, marking stock | Big tap targets, "carry over from yesterday" bulk action, works offline |
 | Driver | Phone in a moving Tamaraw, one-handed | Following today's route, marking deliveries, collecting signatures for suki | Ordered stop list, big delivered button, camera + signature pad |
-| Admin | Tablet or laptop, well-lit office | Dispatching trucks, watching suki exposure, managing the catalog | Kanban board, route load check, daily price entry table |
+| Admin | Laptop first (well-lit office), but `/admin` must also work on a phone | Dispatching trucks, watching suki exposure, managing the catalog | Kanban board, route load check, daily price entry table |
 
 If you're writing code that doesn't serve one of these four users, you're writing the wrong code.
 
@@ -107,6 +107,13 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] Bilingual UI (Tagalog/English): switcher on `/login`, `src/lib/i18n/` dictionaries covering every screen plus server-emitted tRPC/Server Action messages, verified live that the same request returns the right language purely off the `sarihub_lang` cookie. See the i18n paragraph above for the required pattern on new strings.
 - [x] Playwright e2e for the money path: login → order → price lock survives a same-day price change, plus the suki ledger round trip on place/cancel (needs the live project)
 - [ ] Payments via PayMongo (explicitly later — suki tab is the MVP payment method)
+
+### Monochrome redesign + guest checkout
+- [x] Black-and-white, Apple-style design system: tokens in `src/app/globals.css` (black `action` is the only accent; green/amber/red only for status), pill `Button`, `Card`, `Input`, `Logo`/`Wordmark`, `PageHeader`, frosted `.glass` bars. No orange/beige left.
+- [x] Guest storefront: `/` and `/home` are public (middleware), `catalog.today` is a `publicProcedure`. Guests browse today's prices and fill the localStorage cart; the cart sheet swaps "Place order" for "Sign in to place order", linking to `/login?next=/home?checkout=1`. `next` is threaded through `/login` → `/verify` (and the dev login) and validated by `safeNext` (`src/lib/safeNext.ts`, same-origin paths only — never redirect to a raw `next`). Returning with `?checkout=1` reopens the cart. Other protected pages redirect to `/login?next=<path>`.
+- [x] Admin console responsive: sidebar at `lg`+, glass top bar + bottom tab bar on phones, tables collapse to cards.
+- [x] Buyer and driver screens restyled, phone-sized.
+- [ ] Not yet verified live against the Supabase project (no `.env` on the machine that built it) — run the Playwright specs (`tests/e2e/guest-checkout.spec.ts`, `money-path.spec.ts`) before shipping.
 
 ### Deferred from the bilingual UI work (low priority, not blocking anything)
 - [x] A language switcher reachable after login — shipped as part of the

@@ -6,10 +6,10 @@ import { getServerLocale } from "~/lib/i18n/server";
 export default async function OfflinePage() {
   const dict = getDictionary(await getServerLocale());
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col items-center justify-center px-5 text-center">
-      <Logo />
-      <h1 className="mt-4 text-lg font-medium">{dict.offline.title}</h1>
-      <p className="mt-1 text-[13px] text-ink-2">{dict.offline.message}</p>
+    <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col items-center justify-center px-6 text-center">
+      <Logo size={72} />
+      <h1 className="mt-6 text-[26px] font-bold tracking-tight">{dict.offline.title}</h1>
+      <p className="mt-2 text-[16px] leading-relaxed text-ink-2">{dict.offline.message}</p>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Eraser } from "lucide-react";
 
 import { Button } from "~/components/ui/Button";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
@@ -25,10 +26,10 @@ export function SignaturePad(props: { onChange: (hasInk: boolean) => void }) {
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.scale(devicePixelRatio, devicePixelRatio);
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.strokeStyle = "#1a1a1a";
+      ctx.strokeStyle = "#1d1d1f";
     }
   }, []);
 
@@ -41,7 +42,7 @@ export function SignaturePad(props: { onChange: (hasInk: boolean) => void }) {
     <div>
       <canvas
         ref={canvasRef}
-        className="h-36 w-full touch-none rounded-md border border-hair-strong bg-white"
+        className={`h-44 w-full touch-none rounded-md border-2 bg-surface ${hasInk ? "border-action" : "border-dashed border-hair-strong"}`}
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           drawing.current = true;
@@ -67,7 +68,8 @@ export function SignaturePad(props: { onChange: (hasInk: boolean) => void }) {
       />
       <Button
         variant="ghost"
-        className="mt-1 h-9 px-3 text-[13px]"
+        className="mt-1 -ml-2 text-ink-2"
+        disabled={!hasInk}
         onClick={() => {
           const canvas = canvasRef.current;
           const ctx = canvas?.getContext("2d");
@@ -76,6 +78,7 @@ export function SignaturePad(props: { onChange: (hasInk: boolean) => void }) {
           props.onChange(false);
         }}
       >
+        <Eraser size={18} strokeWidth={2} />
         {dict.signaturePad.clear}
       </Button>
     </div>

@@ -7,12 +7,20 @@ function pesoTextToNumber(text: string): number {
   return Number((match[1] ?? "").replace(/,/g, ""));
 }
 
-/** Reads the suki balance pill on the owner's /home ("Suki tab" row). */
+/** Reads the suki balance card on the owner's /home ("Suki tab" card). */
 async function readSukiBalance(page: Page): Promise<number> {
-  const label = page.getByText("Suki tab", { exact: true });
-  const row = label.locator("xpath=..");
-  const priceText = await row.locator(".price").first().textContent();
+  const card = page.getByRole("link").filter({ hasText: "Suki tab" });
+  const priceText = await card.locator(".price").first().textContent();
   return pesoTextToNumber(priceText ?? "");
+}
+
+/** The "1 kilo" unit row inside the (search-narrowed) Sibuyas product card. */
+function sibuyasKiloRow(page: Page) {
+  return page
+    .getByRole("article")
+    .filter({ hasText: "Sibuyas" })
+    .getByRole("listitem")
+    .filter({ has: page.getByText("1 kilo", { exact: true }) });
 }
 
 /** Sets today's price for Sibuyas · 1 kilo on the buyer price board and waits for it to save. */
@@ -58,13 +66,13 @@ test("money path: price lock survives a price change, suki ledger round-trips on
     // The unfiltered catalog shows a "1 kilo" unit for several products
     // (Sibuyas, Kamatis, Galunggong, Asukal) — narrow to Sibuyas first.
     await ownerPage.getByPlaceholder(/Hanapin/i).fill("sibuyas");
-    await expect(ownerPage.getByRole("button", { name: /^1 kilo/ })).toContainText("₱161.00");
+    await expect(sibuyasKiloRow(ownerPage)).toContainText("₱161.00");
   });
 
   let orderUrl = "";
 
   await test.step("owner adds the unit and places the order", async () => {
-    await ownerPage.getByRole("button", { name: /^1 kilo/ }).click();
+    await ownerPage.getByRole("button", { name: "Idagdag ang Sibuyas 1 kilo" }).click();
     await ownerPage.getByRole("button", { name: /Tingnan ang order/ }).click();
     await expect(ownerPage.getByRole("heading", { name: "Ang order ninyo" })).toBeVisible();
     await ownerPage.getByRole("button", { name: /I-place ang order/ }).click();
@@ -99,7 +107,7 @@ test("money path: price lock survives a price change, suki ledger round-trips on
   await test.step("catalog now shows the new price going forward", async () => {
     await ownerPage.goto("/home");
     await ownerPage.getByPlaceholder(/Hanapin/i).fill("sibuyas");
-    await expect(ownerPage.getByRole("button", { name: /^1 kilo/ })).toContainText("₱179.00");
+    await expect(sibuyasKiloRow(ownerPage)).toContainText("₱179.00");
   });
 
   await test.step("owner cancels the order (cleanup) and balance reverts", async () => {

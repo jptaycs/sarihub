@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { CircleUser, Navigation } from "lucide-react";
+import { Check, CheckCircle2, Navigation, Phone, Truck } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
@@ -28,6 +27,14 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type RoutesToday = RouterOutputs["driver"]["routesToday"];
 type Stop = RouterOutputs["driver"]["stops"][number];
 
+/** Secondary pill styling for anchors (tel:, maps) that must look like buttons. */
+const linkPill =
+  "inline-flex h-tap flex-1 items-center justify-center gap-2 rounded-pill bg-surface-2 px-4 text-[15px] font-semibold text-ink transition-transform active:scale-[0.97] active:bg-hair";
+
+function isDone(stop: Stop): boolean {
+  return stop.status === "delivered" || stop.status === "settled";
+}
+
 export function DriverClient() {
   const dict = useDictionary();
   const { locale } = useLocale();
@@ -35,12 +42,10 @@ export function DriverClient() {
   const [pickedRouteId, setPickedRouteId] = useState<string | null>(null);
 
   if (routesQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
+    return <StatusText>{dict.common.loading}</StatusText>;
   }
   if (routesQuery.error || !routesQuery.data) {
-    return (
-      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
-    );
+    return <StatusText danger>{dict.common.connectionError}</StatusText>;
   }
 
   const { day, routes } = routesQuery.data;
@@ -48,33 +53,23 @@ export function DriverClient() {
   const routeId = pickedRouteId ?? (routes.length === 1 ? routes[0]!.id : null);
 
   return (
-    <div>
-      <header className="flex items-start justify-between py-3">
-        <div>
-          <h1 className="title-large">{dict.driver.title}</h1>
-          <p className="mt-0.5 text-[13px] text-ink-2">{formatManilaDate(day, locale)}</p>
-        </div>
-        <Link
-          href="/profile"
-          aria-label={dict.nav.profileAria}
-          className="mt-1 flex h-10 w-10 items-center justify-center rounded-pill border border-hair-strong bg-white text-ink-2 active:bg-surface-2"
-        >
-          <CircleUser size={22} strokeWidth={1.75} />
-        </Link>
-      </header>
+    <div className="animate-fade-in pt-4">
+      <h1 className="title-large">{dict.driver.title}</h1>
+      <p className="mt-1 text-[15px] text-ink-2">{formatManilaDate(day, locale)}</p>
 
       {routes.length > 1 && (
-        <div className="-mx-5 mb-2 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+        <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
           {routes.map((r) => (
             <button
               key={r.id}
               type="button"
+              aria-pressed={routeId === r.id}
               onClick={() => setPickedRouteId(r.id)}
               className={cn(
-                "h-10 shrink-0 rounded-pill border px-3.5 text-[13px] font-medium",
+                "tnum h-tap shrink-0 rounded-pill px-5 text-[15px] font-semibold transition-transform active:scale-[0.97]",
                 routeId === r.id
-                  ? "border-action bg-action text-white"
-                  : "border-hair-strong bg-white text-ink-2 active:bg-surface-2",
+                  ? "bg-action text-white"
+                  : "bg-surface text-ink shadow-[var(--shadow-card)] active:bg-surface-2",
               )}
             >
               {r.name} · {r.deliveredCount}/{r.stopCount}
@@ -86,9 +81,22 @@ export function DriverClient() {
       {routeId ? (
         <StopList routeId={routeId} routes={routes} />
       ) : (
-        <p className="pt-8 text-center text-[13px] text-ink-2">{dict.driver.pickRoute}</p>
+        <StatusText>{dict.driver.pickRoute}</StatusText>
       )}
     </div>
+  );
+}
+
+function StatusText(props: { children: React.ReactNode; danger?: boolean }) {
+  return (
+    <p
+      className={cn(
+        "pt-16 text-center text-[15px]",
+        props.danger ? "font-medium text-danger" : "text-ink-2",
+      )}
+    >
+      {props.children}
+    </p>
   );
 }
 
@@ -101,106 +109,162 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
   const route = props.routes.find((r) => r.id === props.routeId);
 
   if (stopsQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
+    return <StatusText>{dict.common.loading}</StatusText>;
   }
   if (stopsQuery.error || !stopsQuery.data) {
-    return (
-      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
-    );
+    return <StatusText danger>{dict.common.connectionError}</StatusText>;
   }
 
   const stops = stopsQuery.data;
-  const delivered = stops.filter((s) => s.status === "delivered" || s.status === "settled");
+  const delivered = stops.filter(isDone);
 
   if (stops.length === 0) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.driver.emptyStops}</p>;
+    return <StatusText>{dict.driver.emptyStops}</StatusText>;
   }
 
+  const allDone = delivered.length === stops.length;
+  const nextStopId = stops.find((s) => !isDone(s))?.id ?? null;
+  const progressPct = Math.round((delivered.length / stops.length) * 100);
+
   return (
-    <div>
-      <RouteMap
-        stops={stops.map((s) => ({
-          id: s.id,
-          lat: s.lat,
-          lng: s.lng,
-          done: s.status === "delivered" || s.status === "settled",
-        }))}
-      />
-      <div className="mb-3 flex items-center justify-between rounded-md bg-surface-2 px-3.5 py-2.5 text-[13px]">
-        <span className="text-ink-2">
-          {route?.name}
-          {route?.vehiclePlate ? ` · ${route.vehiclePlate}` : ""}
-        </span>
-        <span className="price font-medium">
+    <div className="mt-5">
+      <Card className="p-5">
+        <div className="flex items-center gap-2 text-[14px] text-ink-2">
+          <Truck size={18} strokeWidth={1.75} className="shrink-0" />
+          <span className="truncate">
+            {route?.name}
+            {route?.vehiclePlate ? ` · ${route.vehiclePlate}` : ""}
+          </span>
+        </div>
+        <div className="tnum mt-2 text-[28px] font-bold leading-tight tracking-tight">
           {interpolate(dict.driver.delivered, { delivered: delivered.length, total: stops.length })}
-        </span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-pill bg-surface-2">
+          <div
+            className={cn(
+              "h-full rounded-pill transition-[width] duration-500",
+              allDone ? "bg-success" : "bg-action",
+            )}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        {allDone && (
+          <p className="animate-fade-in mt-4 flex items-center gap-2 text-[15px] font-semibold text-success">
+            <CheckCircle2 size={22} className="shrink-0" />
+            {dict.driver.allDelivered}
+          </p>
+        )}
+      </Card>
+
+      <div className="mt-3">
+        <RouteMap
+          stops={stops.map((s) => ({
+            id: s.id,
+            lat: s.lat,
+            lng: s.lng,
+            done: isDone(s),
+          }))}
+        />
       </div>
-      {stops.map((stop, i) => (
-        <StopCard key={stop.id} stop={stop} index={i + 1} />
-      ))}
+
+      <div className="mt-1 space-y-3">
+        {stops.map((stop, i) => (
+          <StopCard key={stop.id} stop={stop} index={i + 1} isNext={stop.id === nextStopId} />
+        ))}
+      </div>
     </div>
   );
 }
 
-function StopCard(props: { stop: Stop; index: number }) {
-  const { stop, index } = props;
+function StopCard(props: { stop: Stop; index: number; isNext: boolean }) {
+  const { stop, index, isNext } = props;
   const dict = useDictionary();
   const [confirming, setConfirming] = useState(false);
-  const done = stop.status === "delivered" || stop.status === "settled";
+  const done = isDone(stop);
   const activeItems = stop.items.filter((i) => !i.cancelledItem);
 
   return (
-    <Card className={cn("mb-3 px-4 py-3.5", done && "opacity-60")}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span
-              className={cn(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded-pill text-xs font-medium",
-                done ? "bg-success-soft text-success" : "bg-surface-2 text-ink-2",
-              )}
-            >
-              {done ? "✓" : index}
-            </span>
-            <span className="truncate text-[15px] font-medium">{stop.storeName}</span>
-          </div>
-          <div className="mt-1 text-[13px] text-ink-2">
-            {stop.ownerName} ·{" "}
-            <a href={`tel:${stop.phoneE164}`} className="font-medium text-action">
-              {formatPhone(stop.phoneE164)}
-            </a>
-            {stop.lat != null && stop.lng != null && (
-              <>
-                {" · "}
-                <a
-                  href={googleMapsDirectionsUrl(stop.lat, stop.lng)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-0.5 font-medium text-action"
-                >
-                  <Navigation size={12} strokeWidth={2} />
-                  {dict.driver.navigate}
-                </a>
-              </>
-            )}
-          </div>
-          {stop.addressLine && <div className="text-[13px] text-ink-2">{stop.addressLine}</div>}
-        </div>
-        <span className="price shrink-0 text-[15px] font-medium">
-          {formatPeso(stop.totalCentavos)}
+    <Card
+      className={cn(
+        "p-5 transition-opacity",
+        done && "opacity-55",
+        isNext && "ring-2 ring-action",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            "tnum flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-[17px] font-bold",
+            done
+              ? "bg-success-soft text-success"
+              : isNext
+                ? "bg-action text-white"
+                : "bg-surface-2 text-ink",
+          )}
+        >
+          {done ? <Check size={20} strokeWidth={3} /> : index}
         </span>
+        <div className="min-w-0 flex-1">
+          {isNext && <div className="section-label mb-1 text-ink">{dict.driver.nextStop}</div>}
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[19px] font-semibold leading-tight tracking-tight">
+              {stop.storeName}
+            </span>
+            <span className="price shrink-0 text-[17px] font-semibold">
+              {formatPeso(stop.totalCentavos)}
+            </span>
+          </div>
+          <div className="mt-1 text-[15px] text-ink-2">
+            {stop.ownerName} · <span className="tnum">{formatPhone(stop.phoneE164)}</span>
+          </div>
+          {stop.addressLine && (
+            <div className="mt-0.5 text-[14px] text-ink-2">{stop.addressLine}</div>
+          )}
+        </div>
       </div>
 
-      <div className="mt-1.5 text-[13px] text-ink-2">
-        {activeItems.map((i) => `${i.nameTl} ${i.unitLabelTl} ×${i.quantity}`).join(" · ")}
-      </div>
+      {activeItems.length > 0 && (
+        <ul className="mt-4 space-y-1 rounded-md bg-surface-2 px-4 py-3 text-[15px]">
+          {activeItems.map((i, n) => (
+            <li key={n} className="flex justify-between gap-3">
+              <span className="min-w-0">
+                {i.nameTl} <span className="text-ink-2">{i.unitLabelTl}</span>
+              </span>
+              <span className="tnum shrink-0 font-semibold">×{i.quantity}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!done && (
+        <div className="mt-3 flex gap-2">
+          <a
+            href={`tel:${stop.phoneE164}`}
+            className={linkPill}
+            aria-label={`${dict.driver.call} ${formatPhone(stop.phoneE164)}`}
+          >
+            <Phone size={18} strokeWidth={2} />
+            {dict.driver.call}
+          </a>
+          {stop.lat != null && stop.lng != null && (
+            <a
+              href={googleMapsDirectionsUrl(stop.lat, stop.lng)}
+              target="_blank"
+              rel="noreferrer"
+              className={linkPill}
+            >
+              <Navigation size={18} strokeWidth={2} />
+              {dict.driver.navigate}
+            </a>
+          )}
+        </div>
+      )}
 
       {!done && (
         <Button
-          variant="success"
           size="lg"
           block
-          className="mt-3"
+          className="mt-3 h-16 text-[19px]"
           onClick={() => setConfirming(true)}
         >
           {dict.driver.deliveredButton}
@@ -228,6 +292,14 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
   const [hasSignature, setHasSignature] = useState(false);
   const [uploading, setUploading] = useState(false);
   const signatureBox = useRef<HTMLDivElement | null>(null);
+
+  // Thumbnail so the driver can see the photo actually took.
+  const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
+  useEffect(() => {
+    return () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    };
+  }, [photoUrl]);
 
   const busy = uploading || markDelivered.isPending;
 
@@ -257,27 +329,35 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
         type="button"
         aria-label={dict.common.closeAria}
         onClick={props.onClose}
-        className="absolute inset-0 bg-black/40"
+        className="animate-fade-in absolute inset-0 bg-black/40"
       />
-      <div className="relative max-h-[85dvh] w-full max-w-[420px] overflow-y-auto rounded-t-lg bg-surface px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-4">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-pill bg-hair-strong" />
-        <h2 className="text-lg font-medium">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="animate-sheet-up relative max-h-[92dvh] w-full max-w-[440px] overflow-y-auto rounded-t-xl bg-surface px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-3 shadow-[var(--shadow-float)]"
+      >
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-pill bg-hair-strong" />
+        <h2 className="text-[24px] font-bold leading-tight tracking-tight">
           {interpolate(dict.driver.podHeadingFor, { name: stop.ownerName })}
         </h2>
-        <p className="mt-1 text-[13px] text-ink-2">
+        <p className="mt-1.5 text-[15px] text-ink-2">
           {interpolate(dict.driver.podSubtitle, { price: formatPeso(stop.totalCentavos) })}
         </p>
 
-        <label className="mt-4 block">
-          <span className="mb-1 block text-[13px] text-ink-2">{dict.driver.podPhotoLabel}</span>
+        <label className="mt-5 block">
+          <span className="section-label mb-2 block">{dict.driver.podPhotoLabel}</span>
           <span
             className={cn(
-              "flex h-tap w-full cursor-pointer items-center justify-center rounded-md border text-[14px] font-medium",
+              "flex w-full cursor-pointer items-center gap-3 rounded-md text-[16px] font-semibold transition-transform active:scale-[0.99]",
               photo
-                ? "border-success bg-success-soft text-success"
-                : "border-hair-strong bg-white active:bg-surface-2",
+                ? "bg-success-soft p-2 pr-4 text-success"
+                : "h-16 justify-center border-2 border-dashed border-hair-strong bg-surface-2 text-ink active:bg-hair",
             )}
           >
+            {photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- local blob preview, not an optimizable asset
+              <img src={photoUrl} alt="" className="h-14 w-14 shrink-0 rounded-sm object-cover" />
+            )}
             {photo ? dict.driver.hasPhoto : dict.driver.takePhoto}
           </span>
           <input
@@ -289,23 +369,29 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
           />
         </label>
 
-        <div className="mt-3" ref={signatureBox}>
-          <span className="mb-1 block text-[13px] text-ink-2">
+        <div className="mt-5" ref={signatureBox}>
+          <span className="section-label mb-2 block">
             {interpolate(dict.driver.signatureLabel, { name: stop.ownerName })}
           </span>
           <SignaturePad onChange={setHasSignature} />
         </div>
 
         {markDelivered.error && (
-          <p className="mt-2 text-[13px] font-medium text-danger">
+          <p className="mt-3 text-[14px] font-medium text-danger">
             {markDelivered.error.message}
           </p>
         )}
 
-        <Button variant="success" size="lg" block className="mt-4" disabled={busy} onClick={submit}>
+        <Button
+          size="lg"
+          block
+          className="mt-5 h-16 text-[19px]"
+          disabled={busy}
+          onClick={submit}
+        >
           {busy ? dict.driver.submitting : dict.driver.doneButton}
         </Button>
-        <Button variant="ghost" block className="mt-2" disabled={busy} onClick={props.onClose}>
+        <Button variant="ghost" size="lg" block className="mt-2" disabled={busy} onClick={props.onClose}>
           {dict.driver.back}
         </Button>
       </div>

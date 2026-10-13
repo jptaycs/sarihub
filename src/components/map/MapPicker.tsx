@@ -84,14 +84,14 @@ function MapboxPicker(props: { value: LatLng | null; onChange: (v: LatLng | null
     <div>
       <div
         ref={containerRef}
-        className="h-56 w-full overflow-hidden rounded-md border border-hair-strong"
+        className="h-60 w-full overflow-hidden rounded-md bg-surface-2 lg:h-72"
       />
-      <div className="mt-1.5 flex items-center justify-between text-[13px] text-ink-2">
+      <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[13px] text-ink-2">
         <span>{dict.map.pickerHint}</span>
         {value && (
           <button
             type="button"
-            className="font-medium text-action"
+            className="-mr-1 inline-flex h-11 shrink-0 items-center rounded-pill px-3 font-semibold text-ink hover:bg-surface-2"
             onClick={() => {
               markerRef.current?.remove();
               markerRef.current = null;
@@ -126,7 +126,7 @@ function ManualLatLngFallback(props: { value: LatLng | null; onChange: (v: LatLn
 
   return (
     <div>
-      <p className="mb-1.5 text-[13px] text-ink-2">{dict.map.noToken}</p>
+      <p className="mb-2 px-1 text-[13px] text-ink-2">{dict.map.noToken}</p>
       <div className="grid grid-cols-2 gap-2">
         <input
           inputMode="decimal"
@@ -138,8 +138,8 @@ function ManualLatLngFallback(props: { value: LatLng | null; onChange: (v: LatLn
             commit(e.target.value, lngDraft);
           }}
           className={cn(
-            "h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px] outline-none",
-            "focus:border-action",
+            "h-[52px] w-full min-w-0 rounded-md border border-transparent bg-surface-2 px-4 text-base font-medium outline-none transition-[border-color,background-color] placeholder:font-normal placeholder:text-ink-3",
+            "focus:border-action focus:bg-surface",
           )}
         />
         <input
@@ -152,8 +152,8 @@ function ManualLatLngFallback(props: { value: LatLng | null; onChange: (v: LatLn
             commit(latDraft, e.target.value);
           }}
           className={cn(
-            "h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px] outline-none",
-            "focus:border-action",
+            "h-[52px] w-full min-w-0 rounded-md border border-transparent bg-surface-2 px-4 text-base font-medium outline-none transition-[border-color,background-color] placeholder:font-normal placeholder:text-ink-3",
+            "focus:border-action focus:bg-surface",
           )}
         />
       </div>

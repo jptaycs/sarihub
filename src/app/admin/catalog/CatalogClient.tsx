@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Pencil, Plus, Upload } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
-import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
 import {
@@ -21,10 +21,27 @@ import {
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
+import {
+  AdminSheet,
+  CheckRow,
+  checkboxClass,
+  ErrorState,
+  Field,
+  FormActions,
+  LoadingState,
+  PageHeader,
+  selectClass,
+  selectStyle,
+} from "../_components/ui";
+
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type CatalogList = RouterOutputs["admin"]["catalog"]["list"];
 type CatalogProduct = CatalogList[number];
 type CatalogUnit = CatalogProduct["units"][number];
+
+/** Desktop table columns: product · category · source · units · actions. */
+const ROW_GRID =
+  "lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,2.4fr)_auto] lg:items-center lg:gap-5";
 
 export function CatalogClient() {
   const dict = useDictionary();
@@ -32,45 +49,59 @@ export function CatalogClient() {
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  if (catalogQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
-  }
-  if (catalogQuery.error || !catalogQuery.data) {
-    return (
-      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
-    );
-  }
+  if (catalogQuery.isLoading) return <LoadingState />;
+  if (catalogQuery.error || !catalogQuery.data) return <ErrorState />;
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="title-large">{dict.admin.catalog.title}</h2>
-        <div className="flex gap-1.5">
-          {!uploading && (
-            <Button variant="secondary" onClick={() => setUploading(true)}>
-              {dict.admin.catalog.csvImport.uploadButton}
+      <PageHeader
+        title={dict.admin.catalog.title}
+        actions={
+          <>
+            <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setUploading(true)}>
+              <Upload size={18} strokeWidth={2.25} />
+              <span className="truncate">{dict.admin.catalog.csvImport.uploadButton}</span>
             </Button>
-          )}
-          {!creating && (
-            <Button onClick={() => setCreating(true)}>{dict.admin.catalog.newProduct}</Button>
-          )}
-        </div>
-      </div>
+            <Button className="flex-1 sm:flex-none" onClick={() => setCreating(true)}>
+              <Plus size={18} strokeWidth={2.5} />
+              {dict.admin.catalog.newProduct}
+            </Button>
+          </>
+        }
+      />
 
-      {uploading && <CsvImportPanel onDone={() => setUploading(false)} />}
-
-      {creating && (
-        <div className="mt-3 rounded-md border border-hair bg-white px-4 py-4">
-          <h3 className="text-[14px] font-medium">{dict.admin.catalog.newProductHeading}</h3>
-          <ProductForm onDone={() => setCreating(false)} />
-        </div>
+      {uploading && (
+        <AdminSheet
+          title={dict.admin.catalog.csvImport.panelHeading}
+          onClose={() => setUploading(false)}
+        >
+          <CsvImportPanel onDone={() => setUploading(false)} />
+        </AdminSheet>
       )}
 
-      <div className="mt-3">
+      {creating && (
+        <AdminSheet title={dict.admin.catalog.newProductHeading} onClose={() => setCreating(false)}>
+          <ProductForm onDone={() => setCreating(false)} />
+        </AdminSheet>
+      )}
+
+      <Card className="mt-6">
+        <div
+          className={cn(
+            "hair-b hidden px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3",
+            ROW_GRID,
+          )}
+        >
+          <span>{dict.admin.catalog.productColumn}</span>
+          <span>{dict.admin.catalog.category}</span>
+          <span>{dict.admin.catalog.source}</span>
+          <span>{dict.admin.catalog.unitsColumn}</span>
+          <span />
+        </div>
         {catalogQuery.data.map((product) => (
           <ProductRow key={product.id} product={product} />
         ))}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -85,12 +116,15 @@ function CsvImportPanel(props: { onDone: () => void }) {
   });
 
   return (
-    <div className="mt-3 rounded-md border border-hair bg-white px-4 py-4">
-      <h3 className="text-[14px] font-medium">{dict.admin.catalog.csvImport.panelHeading}</h3>
-      <p className="mt-1 text-[13px] text-ink-2">{dict.admin.catalog.csvImport.formatHint}</p>
+    <div>
+      <p className="rounded-md bg-surface-2 px-4 py-3 text-[13px] leading-relaxed text-ink-2">
+        {dict.admin.catalog.csvImport.formatHint}
+      </p>
 
-      <label className="mt-2.5 block">
-        <span className="mb-1 block text-[13px] text-ink-2">{dict.admin.catalog.csvImport.fileLabel}</span>
+      <label className="mt-4 block">
+        <span className="mb-1.5 block px-1 text-[13px] font-medium text-ink-2">
+          {dict.admin.catalog.csvImport.fileLabel}
+        </span>
         <input
           type="file"
           accept=".csv"
@@ -102,21 +136,23 @@ function CsvImportPanel(props: { onDone: () => void }) {
             importCsv.mutate({ csv });
             e.target.value = "";
           }}
-          className="block w-full text-[13px]"
+          className="block w-full min-w-0 rounded-md bg-surface-2 p-1.5 text-[14px] text-ink-2 file:mr-3 file:h-11 file:cursor-pointer file:rounded-pill file:border-0 file:bg-action file:px-5 file:text-[14px] file:font-semibold file:text-white"
         />
       </label>
 
       {importCsv.isPending && (
-        <p className="mt-2 text-[13px] text-ink-2">{dict.admin.catalog.csvImport.uploading}</p>
+        <p className="mt-3 text-[14px] text-ink-2">{dict.admin.catalog.csvImport.uploading}</p>
       )}
 
       {importCsv.error && (
-        <p className="mt-2 text-[13px] font-medium text-danger">{importCsv.error.message}</p>
+        <p className="mt-3 rounded-md bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger">
+          {importCsv.error.message}
+        </p>
       )}
 
       {importCsv.data && (
-        <div className="mt-2.5 rounded-md bg-success-soft px-3 py-2.5 text-[13px] text-success">
-          <p className="font-medium">
+        <div className="mt-3 rounded-md bg-success-soft px-4 py-3 text-[14px] text-success">
+          <p className="font-semibold">
             {interpolate(dict.admin.catalog.csvImport.resultSummary, {
               created: importCsv.data.created,
               updated: importCsv.data.updated,
@@ -125,12 +161,12 @@ function CsvImportPanel(props: { onDone: () => void }) {
           </p>
           {importCsv.data.skipped.length > 0 && (
             <div className="mt-2">
-              <p className="font-medium text-warning">
+              <p className="font-semibold text-warning">
                 {interpolate(dict.admin.catalog.csvImport.skippedHeading, {
                   count: importCsv.data.skipped.length,
                 })}
               </p>
-              <ul className="mt-1 list-disc pl-4 text-ink-2">
+              <ul className="mt-1 list-disc break-words pl-4 text-ink-2">
                 {importCsv.data.skipped.map((s) => (
                   <li key={s.row}>
                     {interpolate(dict.admin.catalog.csvImport.skippedRow, { row: s.row, reason: s.reason })}
@@ -142,7 +178,7 @@ function CsvImportPanel(props: { onDone: () => void }) {
         </div>
       )}
 
-      <Button variant="secondary" block className="mt-3" onClick={props.onDone}>
+      <Button variant="secondary" block className="mt-4" onClick={props.onDone}>
         {dict.admin.catalog.csvImport.cancel}
       </Button>
     </div>
@@ -155,90 +191,98 @@ function ProductRow(props: { product: CatalogProduct }) {
   const [editing, setEditing] = useState(false);
   const [addingUnit, setAddingUnit] = useState(false);
   const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
+  const editingUnit = product.units.find((u) => u.id === editingUnitId);
 
   return (
-    <Card className={cn("mb-3 px-4 py-3.5", !product.isActive && "opacity-60")}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <span className="lbl-tag">{product.nameTl}</span>
-          <span className="lbl-en">{product.nameEn}</span>
-          <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs text-ink-2">
-            {dict.productCategories[product.category]}
-          </span>
-          <span className="text-xs text-ink-3">
-            {product.source === "palengke"
-              ? dict.admin.catalog.sourcePalengkeShort
-              : dict.admin.catalog.sourceWarehouseShort}
-            {product.isPerishable && ` · ${dict.admin.catalog.perishableShort}`}
-          </span>
+    <div className={cn("hair-b px-4 py-4 last:border-b-0 sm:px-5", ROW_GRID)}>
+      <div className={cn("min-w-0", !product.isActive && "opacity-60")}>
+        <p className="lbl-tag truncate">{product.nameTl}</p>
+        <p className="lbl-en truncate">{product.nameEn}</p>
+      </div>
+
+      <div className={cn("mt-2 flex flex-wrap items-center gap-1.5 lg:contents", !product.isActive && "opacity-60")}>
+        <span className="w-fit rounded-pill bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-ink-2 lg:justify-self-start">
+          {dict.productCategories[product.category]}
+        </span>
+        <span className="text-[13px] text-ink-2">
+          {product.source === "palengke"
+            ? dict.admin.catalog.sourcePalengkeShort
+            : dict.admin.catalog.sourceWarehouseShort}
+          {product.isPerishable && ` · ${dict.admin.catalog.perishableShort}`}
           {!product.isActive && (
-            <span className="rounded-pill bg-surface-2 px-2 py-0.5 text-xs font-medium text-danger">
+            <span className="ml-1.5 inline-block rounded-pill bg-danger-soft px-2 py-0.5 text-[12px] font-medium text-danger lg:ml-0 lg:mt-1 lg:block lg:w-fit">
               {dict.admin.catalog.inactiveBadge}
             </span>
           )}
-        </div>
-        <div className="flex gap-1.5">
-          <Button
-            variant="ghost"
-            className="h-9 px-3 text-[13px]"
-            onClick={() => setEditing(!editing)}
+        </span>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 lg:mt-0">
+        {product.units.map((unit) => (
+          <button
+            key={unit.id}
+            type="button"
+            onClick={() => setEditingUnitId(unit.id)}
+            className={cn(
+              "inline-flex h-11 max-w-full items-center gap-2 rounded-pill bg-surface-2 px-4 text-[14px] transition-colors hover:bg-hair lg:h-9 lg:px-3 lg:text-[13px]",
+              !unit.isActive && "text-ink-3 line-through",
+            )}
           >
-            {editing ? dict.admin.catalog.close : dict.admin.catalog.edit}
-          </Button>
-          <Button
-            variant="ghost"
-            className="h-9 px-3 text-[13px]"
-            onClick={() => setAddingUnit(!addingUnit)}
-          >
-            {addingUnit ? dict.admin.catalog.close : dict.admin.catalog.addUnit}
-          </Button>
-        </div>
+            <span className="truncate font-semibold">{unit.labelTl}</span>
+            <span className="shrink-0 text-ink-3">
+              {unit.weightGrams !== null ? `${unit.weightGrams} g` : dict.admin.catalog.noWeight}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex gap-2 lg:mt-0 lg:justify-end">
+        <Button
+          variant="secondary"
+          className="h-11 flex-1 px-4 text-[14px] lg:h-9 lg:flex-none lg:px-3 lg:text-[13px]"
+          onClick={() => setEditing(true)}
+        >
+          <Pencil size={15} strokeWidth={2.25} />
+          {dict.admin.catalog.edit}
+        </Button>
+        <Button
+          variant="secondary"
+          className="h-11 flex-1 px-4 text-[14px] lg:h-9 lg:flex-none lg:px-3 lg:text-[13px]"
+          onClick={() => setAddingUnit(true)}
+        >
+          <Plus size={15} strokeWidth={2.5} />
+          {dict.admin.catalog.addUnit}
+        </Button>
       </div>
 
       {editing && (
-        <div className="mt-2 rounded-md border border-hair bg-white px-4 py-3">
+        <AdminSheet title={dict.admin.catalog.editProductHeading} onClose={() => setEditing(false)}>
           <ProductForm product={product} onDone={() => setEditing(false)} />
-        </div>
+        </AdminSheet>
       )}
 
       {addingUnit && (
-        <div className="mt-2 rounded-md border border-hair bg-white px-4 py-3">
-          <h4 className="text-[13px] font-medium">
-            {interpolate(dict.admin.catalog.newUnitHeading, { name: product.nameTl })}
-          </h4>
+        <AdminSheet
+          title={interpolate(dict.admin.catalog.newUnitHeading, { name: product.nameTl })}
+          onClose={() => setAddingUnit(false)}
+        >
           <UnitForm productId={product.id} onDone={() => setAddingUnit(false)} />
-        </div>
+        </AdminSheet>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-2">
-        {product.units.map((unit) =>
-          editingUnitId === unit.id ? (
-            <div key={unit.id} className="w-full rounded-md border border-hair bg-white px-4 py-3">
-              <UnitForm
-                productId={product.id}
-                unit={unit}
-                onDone={() => setEditingUnitId(null)}
-              />
-            </div>
-          ) : (
-            <button
-              key={unit.id}
-              type="button"
-              onClick={() => setEditingUnitId(unit.id)}
-              className={cn(
-                "inline-flex h-10 items-center gap-2 rounded-md border border-hair-strong bg-white px-3 text-[13px] hover:bg-surface-2",
-                !unit.isActive && "border-hair text-ink-3 line-through",
-              )}
-            >
-              <span className="font-medium">{unit.labelTl}</span>
-              <span className="text-ink-3">
-                {unit.weightGrams !== null ? `${unit.weightGrams} g` : dict.admin.catalog.noWeight}
-              </span>
-            </button>
-          ),
-        )}
-      </div>
-    </Card>
+      {editingUnit && (
+        <AdminSheet
+          title={interpolate(dict.admin.catalog.editUnitHeading, { name: product.nameTl })}
+          onClose={() => setEditingUnitId(null)}
+        >
+          <UnitForm
+            productId={product.id}
+            unit={editingUnit}
+            onDone={() => setEditingUnitId(null)}
+          />
+        </AdminSheet>
+      )}
+    </div>
   );
 }
 
@@ -270,7 +314,7 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
 
   return (
     <form
-      className="mt-2 grid gap-3 sm:grid-cols-2"
+      className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => upsert.mutate(values))}
     >
       <Field label={dict.admin.catalog.productNameTl} error={form.formState.errors.nameTl?.message}>
@@ -280,10 +324,7 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
         <Input {...form.register("nameEn")} placeholder="Red onion" />
       </Field>
       <Field label={dict.admin.catalog.category} error={form.formState.errors.category?.message}>
-        <select
-          {...form.register("category")}
-          className="h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px]"
-        >
+        <select {...form.register("category")} className={selectClass} style={selectStyle}>
           <option value="gulay">{dict.productCategories.gulay}</option>
           <option value="itlog">{dict.productCategories.itlog}</option>
           <option value="isda">{dict.productCategories.isda}</option>
@@ -291,35 +332,30 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
         </select>
       </Field>
       <Field label={dict.admin.catalog.source}>
-        <select
-          {...form.register("source")}
-          className="h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px]"
-        >
+        <select {...form.register("source")} className={selectClass} style={selectStyle}>
           <option value="palengke">{dict.admin.catalog.sourcePalengke}</option>
           <option value="warehouse">{dict.admin.catalog.sourceWarehouse}</option>
         </select>
       </Field>
-      <label className="flex items-center gap-2 text-[14px]">
-        <input type="checkbox" {...form.register("isPerishable")} className="h-5 w-5" />
-        {dict.admin.catalog.perishable}
-      </label>
-      <label className="flex items-center gap-2 text-[14px]">
-        <input type="checkbox" {...form.register("isActive")} className="h-5 w-5" />
-        {dict.admin.catalog.active}
-      </label>
-      <div className="flex gap-2 sm:col-span-2">
+      <CheckRow label={dict.admin.catalog.perishable}>
+        <input type="checkbox" {...form.register("isPerishable")} className={checkboxClass} />
+      </CheckRow>
+      <CheckRow label={dict.admin.catalog.active}>
+        <input type="checkbox" {...form.register("isActive")} className={checkboxClass} />
+      </CheckRow>
+      {upsert.error && (
+        <p className="rounded-md bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger sm:col-span-2">
+          {upsert.error.message}
+        </p>
+      )}
+      <FormActions>
         <Button variant="secondary" onClick={props.onDone} disabled={upsert.isPending}>
           {dict.admin.catalog.cancel}
         </Button>
         <Button type="submit" disabled={upsert.isPending}>
           {upsert.isPending ? dict.admin.catalog.saving : dict.admin.catalog.save}
         </Button>
-      </div>
-      {upsert.error && (
-        <p className="text-[13px] font-medium text-danger sm:col-span-2">
-          {upsert.error.message}
-        </p>
-      )}
+      </FormActions>
     </form>
   );
 }
@@ -352,7 +388,7 @@ function UnitForm(props: { productId: string; unit?: CatalogUnit; onDone: () => 
 
   return (
     <form
-      className="mt-2 grid gap-3 sm:grid-cols-2"
+      className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => upsert.mutate(values))}
     >
       <Field label={dict.admin.catalog.unitLabelTl} error={form.formState.errors.labelTl?.message}>
@@ -377,33 +413,22 @@ function UnitForm(props: { productId: string; unit?: CatalogUnit; onDone: () => 
           placeholder="1000"
         />
       </Field>
-      <label className="flex items-center gap-2 text-[14px]">
-        <input type="checkbox" {...form.register("isActive")} className="h-5 w-5" />
-        {dict.admin.catalog.unitActive}
-      </label>
-      <div className="flex gap-2 sm:col-span-2">
+      <CheckRow label={dict.admin.catalog.unitActive}>
+        <input type="checkbox" {...form.register("isActive")} className={checkboxClass} />
+      </CheckRow>
+      {upsert.error && (
+        <p className="rounded-md bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger sm:col-span-2">
+          {upsert.error.message}
+        </p>
+      )}
+      <FormActions>
         <Button variant="secondary" onClick={props.onDone} disabled={upsert.isPending}>
           {dict.admin.catalog.cancel}
         </Button>
         <Button type="submit" disabled={upsert.isPending}>
           {upsert.isPending ? dict.admin.catalog.saving : dict.admin.catalog.save}
         </Button>
-      </div>
-      {upsert.error && (
-        <p className="text-[13px] font-medium text-danger sm:col-span-2">
-          {upsert.error.message}
-        </p>
-      )}
+      </FormActions>
     </form>
-  );
-}
-
-function Field(props: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1 block text-[13px] text-ink-2">{props.label}</label>
-      {props.children}
-      {props.error && <p className="mt-1 text-xs font-medium text-danger">{props.error}</p>}
-    </div>
   );
 }

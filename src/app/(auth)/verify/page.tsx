@@ -5,7 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
-import { safeNext } from "~/lib/safeNext";
+import { loginHref, safeNext } from "~/lib/safeNext";
 
 import { OtpCodeForm } from "./OtpCodeForm";
 
@@ -27,7 +27,7 @@ export default async function VerifyPage({
     <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col bg-surface px-6 pb-10 pt-[max(env(safe-area-inset-top),16px)]">
       <div className="mb-8">
         <Link
-          href={`/login?next=${encodeURIComponent(next)}`}
+          href={loginHref(next)}
           aria-label={dict.common.back}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 transition-transform active:scale-95"
         >

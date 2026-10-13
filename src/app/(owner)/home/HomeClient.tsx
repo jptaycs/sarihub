@@ -23,6 +23,7 @@ import {
 import { Button } from "~/components/ui/Button";
 import { Wordmark } from "~/components/ui/Logo";
 import { cn } from "~/lib/cn";
+import { loginHref } from "~/lib/safeNext";
 import { formatManila, now, toManila } from "~/lib/datetime";
 import { nextDeliveryDate } from "~/lib/deliverySchedule";
 import { formatPeso } from "~/lib/format";
@@ -179,7 +180,7 @@ export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }
         <Wordmark />
         {!signedIn && (
           <Link
-            href={`/login?next=${encodeURIComponent("/home")}`}
+            href={loginHref("/home")}
             className="inline-flex h-9 items-center rounded-pill bg-action px-4 text-[14px] font-semibold text-white transition-transform active:scale-95"
           >
             {dict.guest.signIn}
@@ -280,13 +281,13 @@ export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }
                 {cartCount}
               </span>
             </span>
-            <span className="flex-1 text-left text-[16px] font-semibold">
+            <span className="min-w-0 flex-1 truncate text-left text-[15px] font-semibold">
               {interpolate(
                 cartCount === 1 ? dict.home.viewOrderButtonOne : dict.home.viewOrderButtonOther,
                 { count: cartCount },
               )}
             </span>
-            <span className="price text-[16px] font-bold">{formatPeso(cartTotal)}</span>
+            <span className="price shrink-0 text-[16px] font-bold">{formatPeso(cartTotal)}</span>
           </button>
         </div>
       )}
@@ -664,7 +665,7 @@ function CartSheet(props: {
         <>
           <p className="pb-4 text-[14px] leading-snug text-ink-2">{dict.guest.checkoutNote}</p>
           <Link
-            href={`/login?next=${encodeURIComponent(CHECKOUT_RETURN)}`}
+            href={loginHref(CHECKOUT_RETURN)}
             className={cn(
               "flex h-14 w-full items-center justify-center rounded-pill bg-action text-[17px] font-semibold text-white transition-transform active:scale-[0.98]",
               lines.length === 0 && "pointer-events-none opacity-40",
