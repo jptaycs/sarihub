@@ -149,7 +149,7 @@ export default async function ProfilePage() {
           <SignOutButton />
         </div>
       </main>
-      <OwnerTabBar />
+      <OwnerTabBar signedIn />
     </>
   );
 }

@@ -12,7 +12,7 @@ import { resendOtpAction, verifyOtpAction, type ResendState, type VerifyState } 
 const CODE_LEN = 6;
 const RESEND_SECONDS = 47;
 
-export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
+export function OtpCodeForm({ phoneE164, next }: { phoneE164: string; next: string }) {
   const dict = useDictionary();
   const [verifyState, verifyAction, verifying] = useActionState<VerifyState, FormData>(
     verifyOtpAction,
@@ -108,6 +108,7 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
       <form ref={formRef} action={verifyAction} className="mt-9">
         <input type="hidden" name="phone" value={phoneE164} />
         <input type="hidden" name="code" value={code} />
+        <input type="hidden" name="next" value={next} />
 
         <div
           className="flex justify-between gap-[10px]"
@@ -131,10 +132,10 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
                 maxLength={1}
                 aria-label={interpolate(dict.verify.digitLabel, { n: i + 1 })}
                 className={cn(
-                  "tnum h-16 flex-1 rounded-md border bg-white text-center text-[28px] font-medium text-ink outline-none transition-shadow",
+                  "tnum h-16 w-0 flex-1 rounded-md border-2 text-center text-[28px] font-semibold text-ink outline-none transition-all",
                   isFocus
-                    ? "border-action shadow-[0_0_0_3px_rgba(216,90,48,0.15)]"
-                    : "border-hair-strong",
+                    ? "border-action bg-surface"
+                    : "border-transparent bg-surface-2",
                 )}
               />
             );
@@ -167,7 +168,7 @@ export function OtpCodeForm({ phoneE164 }: { phoneE164: string }) {
             disabled={seconds > 0 || resending}
             onClick={() => seconds === 0 && setSeconds(RESEND_SECONDS)}
             className={cn(
-              "bg-transparent text-sm font-medium",
+              "bg-transparent text-[15px] font-semibold",
               seconds > 0 ? "text-ink-3" : "text-ink",
             )}
           >

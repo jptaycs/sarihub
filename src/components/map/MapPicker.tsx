@@ -50,7 +50,7 @@ function MapboxPicker(props: { value: LatLng | null; onChange: (v: LatLng | null
 
     const placeMarker = (lng: number, lat: number) => {
       if (!markerRef.current) {
-        markerRef.current = new mapboxgl.Marker({ draggable: true, color: "#D85A30" })
+        markerRef.current = new mapboxgl.Marker({ draggable: true, color: "#000000" })
           .setLngLat([lng, lat])
           .addTo(map);
         markerRef.current.on("dragend", () => {

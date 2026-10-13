@@ -7,20 +7,32 @@ import { Button } from "~/components/ui/Button";
 import { devLoginAction, type DevAccount, type DevLoginState } from "./devLoginAction";
 
 /** Renders nothing outside development — gated again server-side in devLoginAction. */
-export function DevLoginButtons() {
+export function DevLoginButtons({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState<DevLoginState, FormData>(
     devLoginAction,
     null,
   );
 
   return (
-    <div className="mt-6 rounded-md border border-dashed border-hair-strong bg-surface-2 p-4">
+    <div className="mt-6 rounded-lg border border-dashed border-hair-strong p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-3">
         Dev shortcut — hindi lalabas sa production
       </p>
       <div className="mt-3 flex gap-2">
-        <DevButton account="owner" label="Sari-Sari Owner" action={formAction} pending={pending} />
-        <DevButton account="staff" label="Staff (admin)" action={formAction} pending={pending} />
+        <DevButton
+          account="owner"
+          label="Sari-Sari Owner"
+          next={next}
+          action={formAction}
+          pending={pending}
+        />
+        <DevButton
+          account="staff"
+          label="Staff (admin)"
+          next={next}
+          action={formAction}
+          pending={pending}
+        />
       </div>
       {state?.error ? (
         <p role="alert" className="mt-3 text-sm text-danger">
@@ -34,18 +46,21 @@ export function DevLoginButtons() {
 function DevButton(props: {
   account: DevAccount;
   label: string;
+  next: string;
   action: (formData: FormData) => void;
   pending: boolean;
 }) {
   return (
     <form action={props.action} className="flex-1">
       <input type="hidden" name="account" value={props.account} />
+      <input type="hidden" name="next" value={props.next} />
       <Button
         type="submit"
         variant="secondary"
         block
         disabled={props.pending}
-        className="h-10 text-[13px]"
+        size="sm"
+        className="text-[13px]"
       >
         {props.pending ? "…" : `Mag-login: ${props.label}`}
       </Button>

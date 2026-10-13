@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { safeNext } from "~/lib/safeNext";
 import { startPhoneOtp, verifyPhoneOtp } from "~/server/services/auth";
 
 /**
@@ -42,5 +43,5 @@ export async function devLoginAction(
   if (!verified.ok) {
     return { error: verified.message };
   }
-  redirect("/home");
+  redirect(safeNext(formData.get("next")));
 }

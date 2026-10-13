@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
+import { safeNext } from "~/lib/safeNext";
 import { startPhoneOtp } from "~/server/services/auth";
 
 const schema = z.object({ phone: z.string().min(1) });
@@ -24,5 +25,6 @@ export async function startOtpAction(
   if (!result.ok) {
     return { error: result.message };
   }
-  redirect(`/verify?phone=${encodeURIComponent(result.phoneE164)}`);
+  const next = safeNext(formData.get("next"));
+  redirect(`/verify?phone=${encodeURIComponent(result.phoneE164)}&next=${encodeURIComponent(next)}`);
 }
