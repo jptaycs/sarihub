@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
+import { safeNext } from "~/lib/safeNext";
 import { startPhoneOtp, verifyPhoneOtp } from "~/server/services/auth";
 
 const verifySchema = z.object({
@@ -30,7 +31,7 @@ export async function verifyOtpAction(
   if (!result.ok) {
     return { error: result.message };
   }
-  redirect("/home");
+  redirect(safeNext(formData.get("next")));
 }
 
 const resendSchema = z.object({ phone: z.string().regex(/^\+63\d{10}$/) });

@@ -13,28 +13,35 @@ import {
   type ProductCategory,
 } from "~/server/db/schema";
 import { stockoutsForDay } from "~/server/services/stockouts";
-import { protectedProcedure, router } from "~/server/trpc/init";
+import { publicProcedure, router } from "~/server/trpc/init";
 
 export const catalogRouter = router({
   /**
    * Everything orderable right now: active products, their units, and the
    * live price per unit. Units with no valid price today come back with
    * `priceCentavos: null` — shown but not orderable.
+   *
+   * Public: guests browse today's prices and fill a cart before signing in
+   * (login is only required at checkout). Nothing here is store-specific
+   * except which delivery day's stockouts apply.
    */
-  today: protectedProcedure.query(async ({ ctx }) => {
+  today: publicProcedure.query(async ({ ctx }) => {
     const at = now();
 
     // Stockouts apply per delivery day, so resolve the day this caller's next
-    // order would ride. No store/route yet → fall back to today's Manila date.
-    const [store] = await ctx.db
-      .select({
-        cutoffLocal: routes.cutoffLocal,
-        activeWeekdays: routes.activeWeekdays,
-      })
-      .from(stores)
-      .innerJoin(routes, eq(routes.id, stores.routeId))
-      .where(eq(stores.ownerUserId, ctx.user.id))
-      .limit(1);
+    // order would ride. Guests, or owners with no store/route yet, fall back
+    // to today's Manila date.
+    const [store] = ctx.user
+      ? await ctx.db
+          .select({
+            cutoffLocal: routes.cutoffLocal,
+            activeWeekdays: routes.activeWeekdays,
+          })
+          .from(stores)
+          .innerJoin(routes, eq(routes.id, stores.routeId))
+          .where(eq(stores.ownerUserId, ctx.user.id))
+          .limit(1)
+      : [];
     const deliveryDayStr = formatManila(store ? nextDeliveryDate(store, at) : at, "yyyy-MM-dd");
     const stockouts = await stockoutsForDay(ctx.db, deliveryDayStr);
 

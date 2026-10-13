@@ -1,9 +1,7 @@
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-
 import { Card, CardRow } from "~/components/ui/Card";
 import { LanguageSwitcher } from "~/components/ui/LanguageSwitcher";
 import { OwnerTabBar } from "~/components/ui/OwnerTabBar";
+import { PageHeader } from "~/components/ui/PageHeader";
 import { SignOutButton } from "~/components/ui/SignOutButton";
 import { formatPeso, formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
@@ -32,20 +30,10 @@ export default async function ProfilePage() {
           : dict.profile.roleDriver;
 
     return (
-      <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-10 pt-2">
-        <div className="mb-4">
-          <Link
-            href="/"
-            aria-label={dict.common.back}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hair bg-white"
-          >
-            <ChevronLeft size={20} strokeWidth={2} />
-          </Link>
-        </div>
+      <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-10">
+        <PageHeader title={dict.profile.title} backHref="/" backLabel={dict.common.back} />
 
-        <h1 className="title-large">{dict.profile.title}</h1>
-
-        <p className="section-label mb-2 mt-6">{dict.profile.staffInfoHeading}</p>
+        <p className="section-label mb-2 mt-2 px-1">{dict.profile.staffInfoHeading}</p>
         <Card>
           <CardRow className="flex items-center justify-between">
             <span className="text-[15px] text-ink-2">{dict.profile.ownerName}</span>
@@ -63,12 +51,12 @@ export default async function ProfilePage() {
           </CardRow>
         </Card>
 
-        <p className="section-label mb-2 mt-6">{dict.profile.languageHeading}</p>
+        <p className="section-label mb-2 mt-6 px-1">{dict.profile.languageHeading}</p>
         <Card className="px-4 py-3.5">
           <LanguageSwitcher />
         </Card>
 
-        <div className="mt-6">
+        <div className="mt-8">
           <SignOutButton />
         </div>
       </main>
@@ -83,12 +71,12 @@ export default async function ProfilePage() {
 
   return (
     <>
-      <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col px-5 pb-28 pt-2">
-        <h1 className="title-large py-3">{dict.profile.title}</h1>
+      <main className="mx-auto flex min-h-dvh max-w-[440px] flex-col px-5 pb-28">
+        <PageHeader title={dict.profile.title} />
 
         {store ? (
           <>
-            <p className="section-label mb-2 mt-4">{dict.profile.storeInfoHeading}</p>
+            <p className="section-label mb-2 mt-2 px-1">{dict.profile.storeInfoHeading}</p>
             <Card>
               <CardRow className="flex items-center justify-between">
                 <span className="text-[15px] text-ink-2">{dict.profile.storeName}</span>
@@ -118,7 +106,7 @@ export default async function ProfilePage() {
               </CardRow>
             </Card>
 
-            <p className="section-label mb-2 mt-6">{dict.profile.sukiHeading}</p>
+            <p className="section-label mb-2 mt-6 px-1">{dict.profile.sukiHeading}</p>
             <Card>
               <CardRow className="flex items-center justify-between">
                 <span className="text-[15px] text-ink-2">{dict.profile.sukiBalance}</span>
@@ -135,21 +123,21 @@ export default async function ProfilePage() {
             </Card>
           </>
         ) : (
-          <div className="mt-4 rounded-md bg-warning-soft px-3.5 py-3 text-[13px] text-warning">
+          <div className="mt-2 rounded-md bg-warning-soft px-4 py-3 text-[14px] text-warning">
             {dict.profile.noStore}
           </div>
         )}
 
-        <p className="section-label mb-2 mt-6">{dict.profile.languageHeading}</p>
+        <p className="section-label mb-2 mt-6 px-1">{dict.profile.languageHeading}</p>
         <Card className="px-4 py-3.5">
           <LanguageSwitcher />
         </Card>
 
-        <div className="mt-6">
+        <div className="mt-8">
           <SignOutButton />
         </div>
       </main>
-      <OwnerTabBar />
+      <OwnerTabBar signedIn />
     </>
   );
 }

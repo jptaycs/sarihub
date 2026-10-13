@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 
 import { activeStaffForRequest } from "~/server/services/auth";
-import { AdminNav } from "./AdminNav";
+import { AdminSidebar, AdminTabBar, AdminTopBar } from "./AdminNav";
 
 /**
- * Admin area: tablet/laptop, well-lit office. Admin staff only.
- * A persistent left sidebar — the Apple/NavigationSplitView pattern for a
- * tablet/desktop console — replaces the previous top pill-nav bar.
+ * Admin area: laptop-first console that also works one-handed on a phone.
+ * Admin staff only.
+ *
+ * - ≥ lg: persistent left sidebar (NavigationSplitView pattern) + wide content.
+ * - < lg: sticky frosted top bar + fixed bottom tab bar, like the owner app.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const staffRow = await activeStaffForRequest();
@@ -15,17 +17,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[1200px]">
-      <aside className="hair-r flex w-60 shrink-0 flex-col gap-6 px-4 pb-6 pt-6">
-        <div className="px-3">
-          <h1 className="text-[19px] font-semibold leading-[1.15] tracking-tight">
-            SariHub Admin
-          </h1>
-          <p className="mt-0.5 truncate text-[13px] text-ink-2">{staffRow.name}</p>
-        </div>
-        <AdminNav />
-      </aside>
-      <main className="min-w-0 flex-1 px-6 pb-12 pt-6 sm:px-8">{children}</main>
+    <div className="min-h-dvh lg:flex">
+      <AdminSidebar staffName={staffRow.name} />
+      <div className="min-w-0 flex-1">
+        <AdminTopBar />
+        <main className="mx-auto w-full max-w-[1280px] px-4 pb-[calc(env(safe-area-inset-bottom)+96px)] pt-4 sm:px-6 lg:px-8 lg:pb-16 lg:pt-10">
+          {children}
+        </main>
+      </div>
+      <AdminTabBar staffName={staffRow.name} />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { RegisterSW } from "./RegisterSW";
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-sans",
 });
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#FAF7F2",
+  themeColor: "#F5F5F7",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Palengke-on-Wheels para sa mga sari-sari store.",
     start_url: "/home",
     display: "standalone",
-    background_color: "#FAF7F2",
-    theme_color: "#FAF7F2",
+    background_color: "#F5F5F7",
+    theme_color: "#F5F5F7",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },

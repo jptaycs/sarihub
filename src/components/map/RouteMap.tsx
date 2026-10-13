@@ -61,7 +61,7 @@ function RouteMapInner(props: {
         const el = document.createElement("div");
         el.textContent = String(stop.index);
         el.className = [
-          "flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-semibold text-white shadow",
+          "flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[13px] font-bold text-white shadow-[var(--shadow-float)]",
           stop.done ? "bg-success" : "bg-action",
         ].join(" ");
         return new mapboxgl.Marker({ element: el }).setLngLat([stop.lng, stop.lat]).addTo(map);
@@ -88,7 +88,7 @@ function RouteMapInner(props: {
   return (
     <div
       ref={containerRef}
-      className="mb-3 h-40 w-full overflow-hidden rounded-md border border-hair-strong"
+      className="mb-3 h-48 w-full overflow-hidden rounded-lg bg-surface-2 shadow-[var(--shadow-card)]"
     />
   );
 }

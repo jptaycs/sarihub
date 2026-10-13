@@ -25,6 +25,7 @@ export function SignOutButton() {
   return (
     <Button
       variant="danger"
+      size="lg"
       block
       disabled={pending}
       onClick={handleSignOut}

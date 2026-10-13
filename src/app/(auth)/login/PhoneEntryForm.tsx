@@ -8,7 +8,7 @@ import { useDictionary } from "~/lib/i18n/LanguageProvider";
 
 import { startOtpAction, type LoginActionState } from "./actions";
 
-export function PhoneEntryForm() {
+export function PhoneEntryForm({ next }: { next: string }) {
   const dict = useDictionary();
   const [state, formAction, pending] = useActionState<LoginActionState, FormData>(
     startOtpAction,
@@ -16,12 +16,13 @@ export function PhoneEntryForm() {
   );
 
   return (
-    <form action={formAction} className="mt-9">
-      <label htmlFor="phone" className="mb-2 block text-xs text-ink-2">
+    <form action={formAction} className="mt-8">
+      <input type="hidden" name="next" value={next} />
+      <label htmlFor="phone" className="mb-2 block text-[13px] font-medium text-ink-2">
         {dict.login.phoneLabel}
       </label>
       <div className="flex gap-[10px]">
-        <div className="flex h-14 w-[76px] items-center justify-center gap-1.5 rounded-md bg-[#F1ECE2] text-base font-medium text-ink">
+        <div className="flex h-14 w-[76px] items-center justify-center gap-1.5 rounded-md bg-surface-2 text-base font-semibold text-ink">
           <PhFlag />
           +63
         </div>
@@ -33,7 +34,7 @@ export function PhoneEntryForm() {
           autoComplete="tel-national"
           placeholder="917 845 2310"
           required
-          className="h-14 flex-1 text-lg tracking-[0.02em]"
+          className="h-14 flex-1 text-[19px] tracking-[0.02em]"
           aria-invalid={state?.error ? true : undefined}
         />
       </div>

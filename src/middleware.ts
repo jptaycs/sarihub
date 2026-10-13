@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeNext } from "~/lib/safeNext";
+
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 export async function middleware(request: NextRequest) {
@@ -41,8 +43,12 @@ export async function middleware(request: NextRequest) {
   // hand a client expecting JSON the /login page's HTML (fetch follows
   // redirects by default), which surfaces as a confusing parse error instead
   // of a clean "please sign in again".
+  // `/` and `/home` are the guest storefront: anyone can browse today's
+  // prices and fill a cart; sign-in is only demanded at checkout.
+  const isGuestStorefront = pathname === "/" || pathname === "/home";
   const isPublic =
     isAuthRoute ||
+    isGuestStorefront ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/") ||
     pathname === "/favicon.ico" ||
@@ -51,13 +57,14 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 
   if (user && pathname.startsWith("/login")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/home";
-    return NextResponse.redirect(url);
+    const target = safeNext(request.nextUrl.searchParams.get("next"));
+    return NextResponse.redirect(new URL(target, request.url));
   }
 
   return response;

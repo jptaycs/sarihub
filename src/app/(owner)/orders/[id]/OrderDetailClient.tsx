@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Check, Lock } from "lucide-react";
 
 import { Button } from "~/components/ui/Button";
 import { Card, CardRow } from "~/components/ui/Card";
@@ -41,13 +42,13 @@ export function OrderDetailClient(props: { orderId: string }) {
   });
 
   if (orderQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
+    return <div className="h-64 animate-pulse rounded-lg bg-surface" />;
   }
   if (orderQuery.error || !orderQuery.data) {
     return (
       <div className="pt-10 text-center">
-        <p className="text-[13px] text-ink-2">{dict.orderDetail.notFound}</p>
-        <Link href="/orders" className="mt-2 inline-block text-[14px] font-medium text-action">
+        <p className="text-[15px] text-ink-2">{dict.orderDetail.notFound}</p>
+        <Link href="/orders" className="mt-3 inline-block text-[15px] font-semibold text-ink">
           {dict.orderDetail.backLink}
         </Link>
       </div>
@@ -63,18 +64,18 @@ export function OrderDetailClient(props: { orderId: string }) {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-[14px] font-medium">
+        <span className="text-[17px] font-semibold">
           {interpolate(dict.common.deliverOnLabel, { date: formatManilaDate(order.deliverOn, locale) })}
         </span>
         {isCancelled && (
-          <span className="rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-danger">
+          <span className="rounded-pill bg-danger-soft px-3 py-1 text-[12px] font-semibold text-danger">
             {dict.orders.statusCancelled}
           </span>
         )}
       </div>
 
       {isCancelled ? (
-        <div className="mt-3 rounded-md bg-surface-2 px-3.5 py-3 text-[13px]">
+        <div className="mt-4 rounded-lg bg-danger-soft px-4 py-3.5 text-[14px]">
           <div className="font-medium text-danger">{dict.orderDetail.cancelledBanner}</div>
           {order.cancelledAt && (
             <div className="mt-0.5 text-ink-2">
@@ -85,7 +86,7 @@ export function OrderDetailClient(props: { orderId: string }) {
           <div className="mt-1 text-ink-2">{dict.orderDetail.refunded}</div>
         </div>
       ) : (
-        <Card className="mt-3 px-4 py-3.5">
+        <Card className="mt-4 px-4 pb-1 pt-4">
           <ol>
             {steps.map((step, i) => {
               const at = order[step.key];
@@ -95,22 +96,22 @@ export function OrderDetailClient(props: { orderId: string }) {
                   <div className="flex flex-col items-center">
                     <span
                       className={cn(
-                        "mt-0.5 flex h-5 w-5 items-center justify-center rounded-pill text-[11px]",
-                        done ? "bg-success-soft text-success" : "bg-surface-2 text-ink-3",
+                        "flex h-7 w-7 items-center justify-center rounded-full",
+                        done ? "bg-action text-white" : "border-2 border-hair-strong bg-surface",
                       )}
                     >
-                      {done ? "✓" : "·"}
+                      {done && <Check size={15} strokeWidth={3} />}
                     </span>
                     {i < steps.length - 1 && (
-                      <span className={cn("w-px flex-1", done ? "bg-success" : "bg-hair-strong")} />
+                      <span className={cn("w-0.5 flex-1", done ? "bg-action" : "bg-hair")} />
                     )}
                   </div>
-                  <div className="pb-4">
-                    <div className={cn("text-[14px] font-medium", !done && "text-ink-3")}>
+                  <div className="pb-5 pt-0.5">
+                    <div className={cn("text-[16px] font-semibold", !done && "text-ink-3")}>
                       {step.label}
                     </div>
                     {done && (
-                      <div className="text-xs text-ink-2">
+                      <div className="text-[13px] text-ink-2">
                         {formatManila(at, "d MMM", locale)} · {formatManilaTime(at, locale)}
                       </div>
                     )}
@@ -127,14 +128,14 @@ export function OrderDetailClient(props: { orderId: string }) {
         {activeItems.map((item) => (
           <CardRow key={item.id} className="flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-[14px] font-medium">
+              <div className="text-[15px] font-semibold">
                 {item.nameTl} <span className="font-normal text-ink-2">· {item.unitLabelTl}</span>
               </div>
-              <div className="price text-xs text-ink-2">
+              <div className="price text-[13px] text-ink-2">
                 {item.quantity} × {formatPeso(item.lockedUnitPriceCentavos)}
               </div>
             </div>
-            <span className="price text-[14px] font-medium">
+            <span className="price text-[15px] font-semibold">
               {formatPeso(item.lockedTotalCentavos)}
             </span>
           </CardRow>
@@ -154,21 +155,26 @@ export function OrderDetailClient(props: { orderId: string }) {
         ))}
       </Card>
 
-      <div className="flex items-center justify-between py-3">
-        <span className="text-[14px] text-ink-2">{dict.common.sukiTotalLabel}</span>
-        <span className="price text-lg font-semibold">{formatPeso(order.totalCentavos)}</span>
+      <div className="flex items-center justify-between px-1 py-4">
+        <span className="text-[15px] text-ink-2">{dict.common.sukiTotalLabel}</span>
+        <span className="price text-[24px] font-bold tracking-tight">
+          {formatPeso(order.totalCentavos)}
+        </span>
       </div>
 
-      <p className="text-xs text-ink-3">{dict.orderDetail.priceLockNote}</p>
+      <div className="flex gap-3 rounded-md bg-surface px-4 py-3 text-[13px] leading-snug text-ink-2 shadow-[var(--shadow-card)]">
+        <Lock size={16} strokeWidth={2.25} className="mt-0.5 shrink-0 text-ink" />
+        {dict.orderDetail.priceLockNote}
+      </div>
 
       {order.cancellable && (
-        <div className="hair-t mt-4 pt-4">
+        <div className="mt-6">
           {!confirmingCancel ? (
             <>
-              <Button variant="danger" block onClick={() => setConfirmingCancel(true)}>
+              <Button variant="danger" size="lg" block onClick={() => setConfirmingCancel(true)}>
                 {dict.orderDetail.cancelButton}
               </Button>
-              <p className="mt-2 text-center text-xs text-ink-3">
+              <p className="mt-2 text-center text-[13px] text-ink-3">
                 {interpolate(dict.orderDetail.cancelUntil, {
                   time: formatManilaTime(order.cancelUntil, locale),
                   date: formatManila(order.cancelUntil, "d MMM", locale),
@@ -177,7 +183,7 @@ export function OrderDetailClient(props: { orderId: string }) {
             </>
           ) : (
             <>
-              <p className="text-center text-[14px] font-medium">
+              <p className="text-center text-[16px] font-semibold">
                 {dict.orderDetail.confirmCancel}
               </p>
               <div className="mt-3 flex gap-2">

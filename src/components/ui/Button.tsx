@@ -3,24 +3,25 @@ import { forwardRef } from "react";
 import { cn } from "~/lib/cn";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success" | "warning";
-type ButtonSize = "md" | "lg";
+type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-md font-medium tracking-tight whitespace-nowrap transition-[background-color,transform] duration-150 ease-[var(--ease-spring)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 select-none";
+  "inline-flex items-center justify-center gap-2 rounded-pill font-semibold tracking-tight whitespace-nowrap transition-[background-color,transform,opacity] duration-150 ease-[var(--ease-spring)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 select-none";
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-action text-white active:bg-action-press",
-  secondary: "bg-white text-ink border border-hair-strong active:bg-surface-2",
-  ghost: "bg-transparent text-ink active:bg-surface-2",
-  danger: "bg-white text-danger border border-[#EBD3CF] active:bg-[#FAEAE7]",
+  primary: "bg-action text-white hover:bg-action-press active:bg-action-press",
+  secondary: "bg-surface-2 text-ink hover:bg-hair active:bg-hair",
+  ghost: "bg-transparent text-ink hover:bg-surface-2 active:bg-surface-2",
+  danger: "bg-danger-soft text-danger hover:bg-[#fbdde1] active:bg-[#fbdde1]",
   success: "bg-success text-white",
   warning: "bg-warning text-white",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  // 48px minimum tap; 56px for primary form CTAs per the prototype.
-  md: "h-tap px-[18px] text-[15px]",
-  lg: "h-14 px-5 text-base",
+  sm: "h-9 px-4 text-[14px]",
+  // 48px minimum tap; 56px for primary form CTAs.
+  md: "h-tap px-5 text-[15px]",
+  lg: "h-14 px-6 text-[17px]",
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

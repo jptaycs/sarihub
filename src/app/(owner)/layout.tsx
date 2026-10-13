@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
 
 import { OwnerTabBar } from "~/components/ui/OwnerTabBar";
+import { createSupabaseServer } from "~/lib/supabase/server";
 import { activeStaffForRequest } from "~/server/services/auth";
 
 /**
  * Owner app shell: /home, /orders, /orders/[id]. Staff sign in through the
- * same phone-OTP door but never shop — this guard used to be duplicated
- * per-page (only home/page.tsx had it; /orders had none at all). Centralized
- * here, plus the persistent bottom tab bar every page in this group shares.
+ * same phone-OTP door but never shop — they're sent to their own area.
+ * /home is also the public guest storefront, so the tab bar adapts to
+ * signed-out visitors.
  */
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const staffRow = await activeStaffForRequest();
@@ -21,10 +22,15 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     redirect("/driver");
   }
 
+  const supabase = await createSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <>
       {children}
-      <OwnerTabBar />
+      <OwnerTabBar signedIn={user !== null} />
     </>
   );
 }

@@ -4,11 +4,12 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
+import { Pencil, Plus } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import type { LatLng } from "~/components/map/MapPicker";
 import { Button } from "~/components/ui/Button";
-import { Card, CardRow } from "~/components/ui/Card";
+import { Card } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import { formatPeso, formatPhone, pesosToCentavos } from "~/lib/format";
@@ -24,6 +25,19 @@ import {
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
+import {
+  AdminSheet,
+  EmptyState,
+  ErrorState,
+  Field,
+  FormActions,
+  LoadingState,
+  PageHeader,
+  pesoBoxClass,
+  selectClass,
+  selectStyle,
+} from "../_components/ui";
+
 const MapPicker = dynamic(() => import("~/components/map/MapPicker").then((m) => m.MapPicker), {
   ssr: false,
 });
@@ -32,48 +46,67 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type StoreList = RouterOutputs["admin"]["stores"]["list"];
 type StoreRowData = StoreList[number];
 
+/** Desktop table columns: store · route/address · suki tab · action. */
+const ROW_GRID =
+  "lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto] lg:items-center lg:gap-6";
+
 export function StoresClient() {
   const dict = useDictionary();
   const storesQuery = trpc.admin.stores.list.useQuery();
   const routesQuery = trpc.admin.stores.routes.useQuery();
   const [creating, setCreating] = useState(false);
 
-  if (storesQuery.isLoading || routesQuery.isLoading) {
-    return <p className="pt-8 text-center text-[13px] text-ink-2">{dict.common.loading}</p>;
-  }
+  if (storesQuery.isLoading || routesQuery.isLoading) return <LoadingState />;
   if (storesQuery.error || routesQuery.error || !storesQuery.data || !routesQuery.data) {
-    return (
-      <p className="pt-8 text-center text-[13px] text-danger">{dict.common.connectionError}</p>
-    );
+    return <ErrorState />;
   }
 
   const routes = routesQuery.data;
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h2 className="title-large">{dict.admin.stores.title}</h2>
-        {!creating && (
-          <Button onClick={() => setCreating(true)}>{dict.admin.stores.newStore}</Button>
-        )}
-      </div>
+      <PageHeader
+        title={dict.admin.stores.title}
+        actions={
+          <Button className="flex-1 sm:flex-none" onClick={() => setCreating(true)}>
+            <Plus size={18} strokeWidth={2.5} />
+            {dict.admin.stores.newStore}
+          </Button>
+        }
+      />
 
       {creating && (
-        <div className="mt-3 rounded-md border border-hair bg-white px-4 py-4">
-          <h3 className="text-[14px] font-medium">{dict.admin.stores.newStore}</h3>
-          <p className="mt-1 text-[13px] text-ink-2">{dict.admin.stores.newStoreHint}</p>
+        <AdminSheet
+          title={dict.admin.stores.newStore}
+          subtitle={dict.admin.stores.newStoreHint}
+          wide
+          onClose={() => setCreating(false)}
+        >
           <CreateStoreForm routes={routes} onDone={() => setCreating(false)} />
-        </div>
+        </AdminSheet>
       )}
 
       {storesQuery.data.length > 0 ? (
-        <Card className="mt-3">
+        <Card className="mt-6">
+          <div
+            className={cn(
+              "hair-b hidden px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3",
+              ROW_GRID,
+            )}
+          >
+            <span>{dict.admin.stores.storeName}</span>
+            <span>{dict.admin.stores.route}</span>
+            <span>{dict.admin.stores.tabColumn}</span>
+            <span />
+          </div>
           {storesQuery.data.map((store) => (
             <StoreRow key={store.id} store={store} routes={routes} />
           ))}
         </Card>
       ) : (
-        <p className="pt-8 text-center text-[13px] text-ink-2">{dict.admin.stores.empty}</p>
+        <div className="mt-6">
+          <EmptyState>{dict.admin.stores.empty}</EmptyState>
+        </div>
       )}
     </div>
   );
@@ -85,41 +118,52 @@ function StoreRow(props: { store: StoreRowData; routes: Array<{ id: string; name
   const [editing, setEditing] = useState(false);
 
   return (
-    <CardRow>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="min-w-0">
-          <span className="text-[14px] font-medium">{store.name}</span>
-          <span className="ml-2 text-[13px] text-ink-2">
-            {store.ownerName} · {formatPhone(store.phoneE164)}
-          </span>
-          <div className="mt-0.5 text-[13px] text-ink-3">
-            {store.routeName ?? dict.admin.stores.noRoute}
-            {store.addressLine ? ` · ${store.addressLine}` : ""}
-          </div>
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span className="price text-[13px] text-ink-2">
-            {interpolate(dict.admin.stores.tabLabel, {
-              balance: formatPeso(store.sukiBalanceCentavos),
-              limit: formatPeso(store.sukiLimitCentavos),
-            })}
-          </span>
-          <Button
-            variant="ghost"
-            className="h-9 px-3 text-[13px]"
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? dict.admin.stores.close : dict.admin.stores.edit}
-          </Button>
-        </div>
+    <div className={cn("hair-b px-4 py-4 last:border-b-0 sm:px-5", ROW_GRID)}>
+      <div className="min-w-0">
+        <p className="truncate text-[16px] font-semibold lg:text-[15px]">{store.name}</p>
+        <p className="mt-0.5 truncate text-[14px] text-ink-2 lg:text-[13px]">
+          {store.ownerName} · {formatPhone(store.phoneE164)}
+        </p>
+      </div>
+
+      <div className="mt-1 min-w-0 lg:mt-0">
+        <p className="truncate text-[14px] text-ink-2 lg:text-ink">
+          {store.routeName ?? dict.admin.stores.noRoute}
+          <span className="lg:hidden">{store.addressLine ? ` · ${store.addressLine}` : ""}</span>
+        </p>
+        {store.addressLine && (
+          <p className="hidden truncate text-[13px] text-ink-3 lg:block">{store.addressLine}</p>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3 lg:contents">
+        <span className="price w-fit rounded-pill bg-surface-2 px-3 py-1.5 text-[13px] font-medium text-ink-2 lg:bg-transparent lg:px-0 lg:py-0 lg:text-[14px]">
+          {interpolate(dict.admin.stores.tabLabel, {
+            balance: formatPeso(store.sukiBalanceCentavos),
+            limit: formatPeso(store.sukiLimitCentavos),
+          })}
+        </span>
+        <Button
+          variant="secondary"
+          className="h-11 shrink-0 px-4 text-[14px] lg:h-9 lg:px-3 lg:text-[13px]"
+          onClick={() => setEditing(true)}
+        >
+          <Pencil size={15} strokeWidth={2.25} />
+          {dict.admin.stores.edit}
+        </Button>
       </div>
 
       {editing && (
-        <div className="mt-2 rounded-md border border-hair bg-white px-4 py-3">
+        <AdminSheet
+          title={dict.admin.stores.editStoreHeading}
+          subtitle={store.name}
+          wide
+          onClose={() => setEditing(false)}
+        >
           <UpdateStoreForm store={store} routes={props.routes} onDone={() => setEditing(false)} />
-        </div>
+        </AdminSheet>
       )}
-    </CardRow>
+    </div>
   );
 }
 
@@ -131,10 +175,7 @@ function RouteSelect(
 ) {
   const { routes, noRouteLabel, className, ...rest } = props;
   return (
-    <select
-      {...rest}
-      className={cn("h-tap w-full rounded-md border border-hair-strong bg-white px-3 text-[15px]", className)}
-    >
+    <select {...rest} className={cn(selectClass, className)} style={selectStyle}>
       <option value="">{noRouteLabel}</option>
       {routes.map((r) => (
         <option key={r.id} value={r.id}>
@@ -152,21 +193,19 @@ function PesoLimitField(props: {
   error?: string;
 }) {
   return (
-    <div>
-      <label className="mb-1 block text-[13px] text-ink-2">{props.dict.admin.stores.sukiLimit}</label>
-      <div className="flex h-tap items-center gap-1 rounded-md border border-hair-strong bg-white px-3">
-        <span className="text-ink-2">₱</span>
+    <Field label={props.dict.admin.stores.sukiLimit} error={props.error}>
+      <div className={pesoBoxClass}>
+        <span className="font-medium text-ink-2">₱</span>
         <input
           inputMode="decimal"
           value={props.draft}
           onChange={(e) => props.onDraft(e.target.value)}
           placeholder="2,000.00"
-          className="price w-full bg-transparent text-[15px] outline-none"
+          className="price w-full min-w-0 bg-transparent text-base font-medium outline-none placeholder:font-normal placeholder:text-ink-3"
           aria-label={props.dict.admin.stores.sukiLimitAria}
         />
       </div>
-      {props.error && <p className="mt-1 text-xs font-medium text-danger">{props.error}</p>}
-    </div>
+    </Field>
   );
 }
 
@@ -194,7 +233,7 @@ function CreateStoreForm(props: {
 
   return (
     <form
-      className="mt-3 grid gap-3 sm:grid-cols-2"
+      className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => create.mutate(values))}
     >
       <Field label={dict.admin.stores.storeName} error={form.formState.errors.name?.message}>
@@ -239,7 +278,9 @@ function CreateStoreForm(props: {
         error={form.formState.errors.sukiLimitCentavos ? dict.admin.stores.invalidAmount : undefined}
       />
       <div className="sm:col-span-2">
-        <span className="mb-1 block text-[13px] text-ink-2">{dict.admin.stores.location}</span>
+        <span className="mb-1.5 block px-1 text-[13px] font-medium text-ink-2">
+          {dict.admin.stores.location}
+        </span>
         <MapPicker
           value={lat != null && lng != null ? { lat, lng } : null}
           onChange={(v: LatLng | null) => {
@@ -248,17 +289,19 @@ function CreateStoreForm(props: {
           }}
         />
       </div>
-      <div className="flex gap-2 sm:col-span-2">
+      {create.error && (
+        <p className="rounded-md bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger sm:col-span-2">
+          {create.error.message}
+        </p>
+      )}
+      <FormActions>
         <Button variant="secondary" onClick={props.onDone} disabled={create.isPending}>
           {dict.admin.stores.cancel}
         </Button>
         <Button type="submit" disabled={create.isPending}>
           {create.isPending ? dict.admin.stores.saving : dict.admin.stores.register}
         </Button>
-      </div>
-      {create.error && (
-        <p className="text-[13px] font-medium text-danger sm:col-span-2">{create.error.message}</p>
-      )}
+      </FormActions>
     </form>
   );
 }
@@ -301,7 +344,7 @@ function UpdateStoreForm(props: {
 
   return (
     <form
-      className="grid gap-3 sm:grid-cols-2"
+      className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => update.mutate(values))}
     >
       <Field label={dict.admin.stores.storeName} error={form.formState.errors.name?.message}>
@@ -344,7 +387,9 @@ function UpdateStoreForm(props: {
         error={form.formState.errors.sukiLimitCentavos ? dict.admin.stores.invalidAmount : undefined}
       />
       <div className="sm:col-span-2">
-        <span className="mb-1 block text-[13px] text-ink-2">{dict.admin.stores.location}</span>
+        <span className="mb-1.5 block px-1 text-[13px] font-medium text-ink-2">
+          {dict.admin.stores.location}
+        </span>
         <MapPicker
           value={lat != null && lng != null ? { lat, lng } : null}
           onChange={(v: LatLng | null) => {
@@ -353,30 +398,22 @@ function UpdateStoreForm(props: {
           }}
         />
       </div>
-      <div className="flex items-end text-[13px] text-ink-3">
+      <p className="px-1 text-[13px] text-ink-3 sm:col-span-2">
         {interpolate(dict.admin.stores.mobileNote, { phone: formatPhone(store.phoneE164) })}
-      </div>
-      <div className="flex gap-2 sm:col-span-2">
+      </p>
+      {update.error && (
+        <p className="rounded-md bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger sm:col-span-2">
+          {update.error.message}
+        </p>
+      )}
+      <FormActions>
         <Button variant="secondary" onClick={props.onDone} disabled={update.isPending}>
           {dict.admin.stores.cancel}
         </Button>
         <Button type="submit" disabled={update.isPending}>
           {update.isPending ? dict.admin.stores.saving : dict.admin.stores.save}
         </Button>
-      </div>
-      {update.error && (
-        <p className="text-[13px] font-medium text-danger sm:col-span-2">{update.error.message}</p>
-      )}
+      </FormActions>
     </form>
-  );
-}
-
-function Field(props: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1 block text-[13px] text-ink-2">{props.label}</label>
-      {props.children}
-      {props.error && <p className="mt-1 text-xs font-medium text-danger">{props.error}</p>}
-    </div>
   );
 }
