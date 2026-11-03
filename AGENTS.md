@@ -25,9 +25,10 @@ Three product realities that should drive every implementation decision:
 | Store owner (Aling Marisa) | Budget Android, 6", patchy 4G | Ordering at 9 PM while watching TV, often one-handed | Browse → tap unit → tap "Place order". 90 seconds end-to-end. Tagalog-first. |
 | Buyer staff | Phone, wet hands, 5 AM at the palengke | Entering today's prices, marking stock | Big tap targets, "carry over from yesterday" bulk action, works offline |
 | Driver | Phone in a moving Tamaraw, one-handed | Following today's route, marking deliveries, collecting signatures for suki | Ordered stop list, big delivered button, camera + signature pad |
+| Truck helper (kasama) | Phone, wet/gloved hands at the 5 AM depot, then the passenger seat | Packing orders, loading the truck, selling off the truck to walk-ups and stores, handing goods over | `/crew`: Pack checklist + load bar, Stock ledger (load/add/reduce/on-hand), Sell POS (cash or suki tab at today's locked price), Deliver (the driver stop list) |
 | Admin | Laptop first (well-lit office), but `/admin` must also work on a phone | Dispatching trucks, watching suki exposure, managing the catalog | Kanban board, route load check, daily price entry table |
 
-If you're writing code that doesn't serve one of these four users, you're writing the wrong code.
+If you're writing code that doesn't serve one of these five users, you're writing the wrong code.
 
 ## Tech stack (canonical)
 
@@ -35,7 +36,7 @@ If you're writing code that doesn't serve one of these four users, you're writin
 - **Language**: TypeScript everywhere. No `any` without a `// TODO(reason)` comment.
 - **Styling**: Tailwind CSS + shadcn/ui. No CSS-in-JS, no styled-components.
 - **API layer**: tRPC. Procedures live under `src/server/routers/`. Server Actions are fine for form submissions; tRPC for everything queried from the client.
-- **Database**: Postgres on Supabase. Migrations in `supabase/migrations/`. Use the Supabase CLI, never edit the schema from the dashboard for anything that ships.
+- **Database**: Postgres on Supabase. Migrations are Drizzle-generated into `drizzle/` (`pnpm db:generate`, `pnpm db:migrate`) with hand-written paired `_rls.sql` files applied via `psql`. Never edit the schema from the dashboard for anything that ships.
 - **Auth**: Supabase Auth, **phone OTP only**. Email/password is not supported. Owners don't have emails.
 - **Storage**: Supabase Storage for product photos and proof-of-delivery photos.
 - **Maps/routing**: Mapbox GL JS for the driver app and admin dispatch view.
@@ -50,7 +51,9 @@ Do not introduce new libraries without justification in the PR description. If y
 ```
 src/
   app/                  Routes. (auth)/login + (auth)/verify, home (owner catalog + cart),
-                        orders (owner order history), api/trpc/[trpc]
+                        orders (owner order history), profile, buyer/, driver/, admin/
+                        (orders, catalog, suki, stores, staff), crew/ (pack, stock, sell,
+                        deliver — the truck helper app), api/trpc/[trpc], api/cron
   components/ui/        Shared primitives (Button, Input, Logo)
   lib/                  Client-safe helpers: format (peso/phone), datetime (Manila tz),
                         deliverySchedule (cutoff + weekday bitmask), useCart, schemas/ (zod,
@@ -58,11 +61,22 @@ src/
                         LanguageProvider, getServerLocale — see below)
   server/
     db/schema/          Drizzle schema, one file per domain
-    routers/            tRPC routers (catalog, store, orders)
-    services/           Business logic the routers stay thin over (auth, orders)
+    routers/            tRPC routers (catalog, store, orders, buyer, admin, driver, crew)
+    services/           Business logic the routers stay thin over (auth, orders incl. the
+                        shared advanceOrderStatus, stockouts, posSales, truckStock)
+  test/                 Vitest helpers: server-only stub, local-Postgres integration handle
     trpc/               init (context, procedures) + root router
 drizzle/                Generated migrations + RLS/trigger SQL + seed.sql
 ```
+
+**Local integration tests.** DB-touching services have `*.integration.test.ts` files that run
+against a throwaway local Postgres when `TEST_DATABASE_URL` is set (they skip otherwise, so plain
+`pnpm test` stays green). Set one up with `createdb sarihub_test`, create the Supabase stand-ins
+(`auth` schema with `auth.users(id, phone)` and `auth.uid()`, `storage.buckets`/`storage.objects`,
+roles `authenticated`/`anon`/`service_role`), then `DATABASE_URL=<local> pnpm db:migrate`, apply
+every `drizzle/*_rls.sql` and `drizzle/seed.sql` with `psql`, and run
+`TEST_DATABASE_URL=<local> pnpm test`. Vitest aliases `server-only` to `src/test/serverOnlyStub.ts`
+so services import cleanly.
 
 Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datetime`, never `new Date()`. Tagalog-first copy in every user-facing string — but the app is bilingual (Tagalog/English) via a switcher on `/login`, so **every new user-facing string, including server-emitted tRPC/Server Action error messages, must go through `src/lib/i18n/dictionaries/{tl,en}.ts`**, never a hardcoded literal. Add the key to `tl.ts` first (canonical), then `en.ts` (TypeScript enforces the same shape). Client components read strings via `useDictionary()`/`useLocale()` from `~/lib/i18n/LanguageProvider`; Server Components and services via `getDictionary(await getServerLocale())`, threading `Locale` down as a parameter the same way `Db`/`userId` are threaded. Use `interpolate(template, vars)` for any string with a dynamic value. DB-sourced content (product names — already dual `nameTl`/`nameEn`, categories, store/owner/route names) is explicitly out of scope for the toggle; see the dictionaries' file comments for why.
 
@@ -114,6 +128,19 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] Admin console responsive: sidebar at `lg`+, glass top bar + bottom tab bar on phones, tables collapse to cards.
 - [x] Buyer and driver screens restyled, phone-sized.
 - [ ] Not yet verified live against the Supabase project (no `.env` on the machine that built it) — run the Playwright specs (`tests/e2e/guest-checkout.spec.ts`, `money-path.spec.ts`) before shipping.
+
+### Then: truck crew app + POS (`/crew`)
+Spec: `docs/superpowers/specs/2026-11-03-truck-crew-pos-design.md`. Plan: `docs/superpowers/plans/2026-11-03-truck-crew-pos-plan.md`.
+- [x] `helper` staff role; `/crew` phone-first app (own layout + four-tab bar) gated to `helper | admin`, linked from the admin menu as "Crew / POS"; `/driver` procedures and layout also accept `helper` so the Deliver tab renders `DriverClient` unchanged
+- [x] Pack: today's `submitted` orders in stop order, per-order item checklist, "I-load sa truck" → `submitted → packed` through the shared `advanceOrderStatus` (extracted from the admin kanban into `services/orders.ts`), truck-load kg bar vs `capacity_kg`; "Umalis na ang truck" moves every packed order to `in_transit` (fires the out-for-delivery SMS)
+- [x] Stock: append-only `truck_stock_movements` (`load`/`add`/`reduce`/`sale`, migration 0010) per route + Manila day; on-hand is *derived* = movements − delivered order lines, so driver/admin/crew deliveries agree with no coupling; "I-load ang lahat ng order" writes only the per-unit shortfall (idempotent); reduce requires a reason
+- [x] Sell (POS): `pos_sales`/`pos_sale_items` with prices locked from `daily_prices` at sale time, idempotency key under an advisory lock, cash or **suki tab** (store picked from a search, limit enforced under `FOR UPDATE`, `charge` ledger row linked via `suki_ledger.pos_sale_id`); every line writes a `sale` stock movement; today's sales list + receipt sheet; client-only sukli calculator
+- [x] Owner sees POS charges: `/profile` gains "Galaw ng suki tab" (`store.ledger`, last 30 rows; POS rows read "Binili sa truck"). No SMS for POS sales yet (queue is keyed by order id)
+- [x] Admin `/admin/staff`: list, register by phone (owner must have signed in once, refuses a phone that owns a store), change role, (de)activate (never yourself)
+- [x] RLS: new tables staff-SELECT via `is_active_staff()`, UPDATE/DELETE revoked (append-only); **the same file enables RLS on `notification_queue`, which 0005 had left readable through PostgREST with the anon key**
+- [x] Verified: migration 0010 + all RLS files + seed apply cleanly to a local Postgres; service integration tests (`posSales`, `truckStock`, `orders.advanceOrderStatus`) pass against it; `next build` compiles every route
+- [ ] **Not yet applied to the live Supabase project** — its host (`vxwqearlhoklioatfygc.supabase.co`) did not resolve when this shipped. Once the project is restored or relinked: `pnpm db:migrate`, `psql -f drizzle/0010_truck_crew_pos_rls.sql`, then run `tests/e2e/crew-pos.spec.ts` and the existing specs. Creating a real `helper` account still needs the Twilio item above (only the two test-OTP numbers can sign in)
+- `inventory_snapshots` / `inventory_snapshot_items` (migration 0000) are unused and superseded by `truck_stock_movements`; left in place because dropping is a destructive migration
 
 ### Deferred from the bilingual UI work (low priority, not blocking anything)
 - [x] A language switcher reachable after login — shipped as part of the
