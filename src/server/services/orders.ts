@@ -1,6 +1,7 @@
 import "server-only";
 
 import { and, desc, eq, inArray, lte, gt, sql } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 
 import { db as defaultDb } from "~/server/db";
 import {
@@ -26,6 +27,8 @@ import { notificationMessage } from "./notificationMessage";
 import { enqueueNotification } from "./notifications";
 
 type Db = typeof defaultDb;
+/** The transaction handle `db.transaction` hands its callback. */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 export type PlacedOrderSummary = {
   orderId: string;
@@ -386,5 +389,97 @@ export async function cancelOrder(
     });
 
     return { ok: true as const, orderId, reversedCentavos: totalCentavos };
+  });
+}
+
+export type OrderTarget = "packed" | "in_transit" | "delivered";
+
+/**
+ * Forward-only lifecycle. Each target status names the single status it may
+ * come from and the timestamp column it stamps. Shared by the admin kanban
+ * (`admin.orders.setStatus`) and the crew app (`crew.packOrder`,
+ * `crew.depart`), so an order packed from the truck and one packed from the
+ * office are indistinguishable afterwards.
+ */
+const STATUS_TRANSITIONS: Record<OrderTarget, { from: string; stamp: "packedAt" | "inTransitAt" | "deliveredAt" }> = {
+  packed: { from: "submitted", stamp: "packedAt" },
+  in_transit: { from: "packed", stamp: "inTransitAt" },
+  delivered: { from: "in_transit", stamp: "deliveredAt" },
+};
+
+export type AdvanceResult =
+  | { ok: true; orderId: string; status: OrderTarget; alreadyThere: boolean }
+  | { ok: false; reason: "not_found" | "bad_transition"; message: string; from?: string };
+
+/**
+ * Push one order a single step forward, inside the caller's transaction.
+ * Locks the row; an order already at `target` is reported as `alreadyThere`
+ * (a double-tap, not an error); any other mismatch is a `bad_transition`.
+ *
+ * Store-facing SMS copy is rendered in the app's default language, not the
+ * staff member's UI language — the text goes to the store, not to them.
+ */
+export async function advanceOrderStatus(
+  tx: Tx,
+  orderId: string,
+  target: OrderTarget,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<AdvanceResult> {
+  const at = now();
+  const transition = STATUS_TRANSITIONS[target];
+  const dict = getDictionary(locale).admin.errors;
+
+  const rows = await tx.execute<{ status: string; store_id: string }>(
+    sql`SELECT status, store_id FROM orders WHERE id = ${orderId} FOR UPDATE`,
+  );
+  const order = rows[0];
+  if (!order) {
+    return { ok: false, reason: "not_found", message: dict.orderNotFound };
+  }
+  if (order.status === target) {
+    return { ok: true, orderId, status: target, alreadyThere: true };
+  }
+  if (order.status !== transition.from) {
+    return {
+      ok: false,
+      reason: "bad_transition",
+      from: order.status,
+      message: interpolate(dict.badTransition, { from: order.status, to: target }),
+    };
+  }
+
+  await tx
+    .update(orders)
+    .set({ status: target, [transition.stamp]: at })
+    .where(eq(orders.id, orderId));
+
+  if (target === "in_transit" || target === "delivered") {
+    const kind = target === "in_transit" ? "out_for_delivery" : "delivered";
+    const [orderStore] = await tx
+      .select({ name: stores.name, phoneE164: stores.phoneE164 })
+      .from(stores)
+      .where(eq(stores.id, order.store_id))
+      .limit(1);
+    // orders.storeId is a NOT NULL FK (onDelete: restrict), so this lookup
+    // can never actually miss — the guard only satisfies TypeScript.
+    if (orderStore) {
+      await enqueueNotification(
+        tx,
+        orderId,
+        kind,
+        orderStore.phoneE164,
+        notificationMessage(getDictionary(DEFAULT_LOCALE), kind, orderStore.name),
+      );
+    }
+  }
+
+  return { ok: true, orderId, status: target, alreadyThere: false };
+}
+
+/** Router helper: turn a failed AdvanceResult into the tRPC error admin.setStatus always threw. */
+export function throwAdvanceError(result: Extract<AdvanceResult, { ok: false }>): never {
+  throw new TRPCError({
+    code: result.reason === "not_found" ? "NOT_FOUND" : "PRECONDITION_FAILED",
+    message: result.message,
   });
 }

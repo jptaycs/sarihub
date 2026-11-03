@@ -6,7 +6,6 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { formatManila, fromManila, now } from "~/lib/datetime";
 import { parsePhPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
-import { interpolate } from "~/lib/i18n/interpolate";
 import {
   createStoreInput,
   importCsvInput,
@@ -28,8 +27,7 @@ import {
   sukiLedger,
 } from "~/server/db/schema";
 import { importCatalogCsv } from "~/server/services/catalogImport";
-import { notificationMessage } from "~/server/services/notificationMessage";
-import { enqueueNotification } from "~/server/services/notifications";
+import { advanceOrderStatus, throwAdvanceError } from "~/server/services/orders";
 import { adminProcedure, router } from "~/server/trpc/init";
 
 /** The Manila-midnight instant for "today" — the delivery day the board shows. */
@@ -37,16 +35,6 @@ function todayManilaStart(): Date {
   const dayStr = formatManila(now(), "yyyy-MM-dd");
   return fromManila(new Date(`${dayStr}T00:00:00`));
 }
-
-/**
- * Forward-only lifecycle. Each target status names the single status it may
- * come from and the timestamp column it stamps.
- */
-const STATUS_TRANSITIONS = {
-  packed: { from: "submitted", stamp: "packedAt" },
-  in_transit: { from: "packed", stamp: "inTransitAt" },
-  delivered: { from: "in_transit", stamp: "deliveredAt" },
-} as const;
 
 const ordersAdminRouter = router({
   /**
@@ -120,51 +108,9 @@ const ordersAdminRouter = router({
 
   /** Push an order one step forward. Backwards moves don't exist. */
   setStatus: adminProcedure.input(setOrderStatusInput).mutation(async ({ ctx, input }) => {
-    const at = now();
-    const transition = STATUS_TRANSITIONS[input.status];
-
     return ctx.db.transaction(async (tx) => {
-      const rows = await tx.execute<{ status: string; store_id: string }>(
-        sql`SELECT status, store_id FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
-      );
-      const order = rows[0];
-      const dict = getDictionary(ctx.locale).admin.errors;
-      if (!order) {
-        throw new TRPCError({ code: "NOT_FOUND", message: dict.orderNotFound });
-      }
-      if (order.status !== transition.from) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: interpolate(dict.badTransition, { from: order.status, to: input.status }),
-        });
-      }
-
-      await tx
-        .update(orders)
-        .set({ status: input.status, [transition.stamp]: at })
-        .where(eq(orders.id, input.orderId));
-
-      if (input.status === "in_transit" || input.status === "delivered") {
-        const kind = input.status === "in_transit" ? "out_for_delivery" : "delivered";
-        const [orderStore] = await tx
-          .select({ name: stores.name, phoneE164: stores.phoneE164 })
-          .from(stores)
-          .where(eq(stores.id, order.store_id))
-          .limit(1);
-        // orders.storeId is a NOT NULL FK (onDelete: restrict), so this
-        // lookup can never actually miss — the guard is here only to
-        // satisfy TypeScript's narrowing.
-        if (orderStore) {
-          await enqueueNotification(
-            tx,
-            input.orderId,
-            kind,
-            orderStore.phoneE164,
-            notificationMessage(getDictionary(ctx.locale), kind, orderStore.name),
-          );
-        }
-      }
-
+      const result = await advanceOrderStatus(tx, input.orderId, input.status, ctx.locale);
+      if (!result.ok) throwAdvanceError(result);
       return { orderId: input.orderId, status: input.status };
     });
   }),
