@@ -2,6 +2,7 @@ import { pgEnum, pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
 
 import { centavos, idColumn, timestampColumns } from "./_shared";
 import { orders } from "./orders";
+import { posSales } from "./pos";
 import { stores } from "./stores";
 
 /**
@@ -23,6 +24,8 @@ export const sukiLedger = pgTable("suki_ledger", {
   amountCentavos: centavos("amount_centavos").notNull(),
   /** Optional link to the order this entry came from (for charge entries). */
   orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+  /** Set on charge rows written by a suki POS sale off the truck (crew app). */
+  posSaleId: uuid("pos_sale_id").references(() => posSales.id, { onDelete: "set null" }),
   reason: text("reason"),
   /**
    * Client-generated, required for admin-entered payment/adjustment rows so

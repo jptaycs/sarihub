@@ -3,11 +3,13 @@ import { boolean, pgEnum, pgTable, text, uuid, varchar } from "drizzle-orm/pg-co
 import { idColumn, timestampColumns } from "./_shared";
 
 /**
- * Distributor-side people. Owners are NOT staff — a store owner's identity
+ * Distributor-side people: buyer (5 AM palengke), admin (office), driver
+ * (wheel), helper (kargador — packs, loads, sells off the truck via /crew).
+ * Owners are NOT staff — a store owner's identity
  * lives on `stores.owner_user_id`. One auth user is either an owner or staff,
  * never both; role screens guard on this table.
  */
-export const staffRole = pgEnum("staff_role", ["buyer", "admin", "driver"]);
+export const staffRole = pgEnum("staff_role", ["buyer", "admin", "driver", "helper"]);
 
 export const staff = pgTable("staff", {
   id: idColumn(),

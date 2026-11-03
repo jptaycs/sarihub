@@ -7,3 +7,4 @@ export * from "./notifications";
 export * from "./suki";
 export * from "./inventory";
 export * from "./staff";
+export * from "./pos";

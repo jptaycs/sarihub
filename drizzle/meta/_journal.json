@@ -64,6 +64,13 @@
       "when": 1787395559193,
       "tag": "0008_deep_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793687072450,
+      "tag": "0010_truck_crew_pos",
+      "breakpoints": true
     }
   ]
 }

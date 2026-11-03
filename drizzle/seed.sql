@@ -110,4 +110,13 @@ ON CONFLICT (owner_user_id) DO NOTHING;
 -- WHERE u.phone = '639171234567'
 -- ON CONFLICT (user_id) DO NOTHING;
 
+-- ── Dev: promote an auth user to truck helper (the /crew app) ────────────────
+-- Same recipe as the buyer block above. Admins can also open /crew, and from
+-- /admin/staff can create staff of any role once the phone has signed in once.
+-- INSERT INTO staff (user_id, name, phone_e164, role)
+-- SELECT u.id, 'Mang Ariel (helper)', '+' || u.phone, 'helper'
+-- FROM auth.users u
+-- WHERE u.phone = '639171234567'
+-- ON CONFLICT (user_id) DO NOTHING;
+
 COMMIT;
