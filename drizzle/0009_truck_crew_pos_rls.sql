@@ -1,5 +1,5 @@
--- Row-level security + triggers for migration 0010 (truck crew app: POS sales,
--- truck stock ledger). Apply after drizzle/0010_truck_crew_pos.sql, same as
+-- Row-level security + triggers for migration 0009 (truck crew app: POS sales,
+-- truck stock ledger). Apply after drizzle/0009_truck_crew_pos.sql, same as
 -- the other paired _rls.sql files.
 
 -- updated_at trigger (function defined in 0000). The two ledgers have only

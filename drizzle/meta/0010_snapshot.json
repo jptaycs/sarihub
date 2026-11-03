@@ -1,6 +1,6 @@
 {
-  "id": "72789c6e-fc38-4815-8d0f-8f35a72d686d",
-  "prevId": "1f00856a-6c53-44f6-9d61-2c0a742e64e7",
+  "id": "1e85c08d-5af3-4570-a73b-e98db71b340c",
+  "prevId": "72789c6e-fc38-4815-8d0f-8f35a72d686d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -689,7 +689,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "order_items_order_idx": {
+          "name": "order_items_order_idx",
+          "columns": [
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "order_items_unit_idx": {
+          "name": "order_items_unit_idx",
+          "columns": [
+            {
+              "expression": "product_unit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "order_items_order_id_orders_id_fk": {
           "name": "order_items_order_id_orders_id_fk",
@@ -863,7 +894,56 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "orders_store_created_idx": {
+          "name": "orders_store_created_idx",
+          "columns": [
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "orders_deliver_route_status_idx": {
+          "name": "orders_deliver_route_status_idx",
+          "columns": [
+            {
+              "expression": "deliver_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "route_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "orders_store_id_stores_id_fk": {
           "name": "orders_store_id_stores_id_fk",
@@ -1084,7 +1164,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "suki_ledger_store_idx": {
+          "name": "suki_ledger_store_idx",
+          "columns": [
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "suki_ledger_store_id_stores_id_fk": {
           "name": "suki_ledger_store_id_stores_id_fk",

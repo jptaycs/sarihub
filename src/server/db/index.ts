@@ -19,7 +19,10 @@ function getDb(): Db {
   if (!url) {
     throw new Error("DATABASE_URL is required.");
   }
-  const client = postgres(url, { prepare: false });
+  // DATABASE_URL is the Supavisor transaction-mode pooler (hence prepare:
+  // false). Keep each serverless instance's own pool small and let idle
+  // sockets go, so a 9 PM ordering burst can't exhaust the pooler.
+  const client = postgres(url, { prepare: false, max: 5, idle_timeout: 20 });
   cached = drizzle(client, { schema });
   return cached;
 }

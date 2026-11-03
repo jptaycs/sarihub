@@ -69,7 +69,14 @@
       "idx": 9,
       "version": "7",
       "when": 1793687072450,
-      "tag": "0010_truck_crew_pos",
+      "tag": "0009_truck_crew_pos",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793688322272,
+      "tag": "0010_hot_path_indexes",
       "breakpoints": true
     }
   ]

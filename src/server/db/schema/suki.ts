@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, pgEnum, pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
 
 import { centavos, idColumn, timestampColumns } from "./_shared";
 import { orders } from "./orders";
@@ -14,30 +14,35 @@ import { stores } from "./stores";
  */
 export const sukiLedgerKind = pgEnum("suki_ledger_kind", ["charge", "payment", "adjustment"]);
 
-export const sukiLedger = pgTable("suki_ledger", {
-  id: idColumn(),
-  storeId: uuid("store_id")
-    .notNull()
-    .references(() => stores.id, { onDelete: "restrict" }),
-  kind: sukiLedgerKind("kind").notNull(),
-  /** Signed centavos. Positive = store now owes more, negative = paid down. */
-  amountCentavos: centavos("amount_centavos").notNull(),
-  /** Optional link to the order this entry came from (for charge entries). */
-  orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
-  /** Set on charge rows written by a suki POS sale off the truck (crew app). */
-  posSaleId: uuid("pos_sale_id").references(() => posSales.id, { onDelete: "set null" }),
-  reason: text("reason"),
-  /**
-   * Client-generated, required for admin-entered payment/adjustment rows so
-   * a retry or a fast double-tap can't double-post money — null for rows
-   * inserted by app code that already has its own guard (order charges and
-   * reversals live inside placeOrder's/cancelOrder's own transaction, and
-   * the stockout cascade is naturally idempotent via unit_stockouts'
-   * onConflictDoNothing).
-   */
-  idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
-  ...timestampColumns,
-});
+export const sukiLedger = pgTable(
+  "suki_ledger",
+  {
+    id: idColumn(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "restrict" }),
+    kind: sukiLedgerKind("kind").notNull(),
+    /** Signed centavos. Positive = store now owes more, negative = paid down. */
+    amountCentavos: centavos("amount_centavos").notNull(),
+    /** Optional link to the order this entry came from (for charge entries). */
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    /** Set on charge rows written by a suki POS sale off the truck (crew app). */
+    posSaleId: uuid("pos_sale_id").references(() => posSales.id, { onDelete: "set null" }),
+    reason: text("reason"),
+    /**
+     * Client-generated, required for admin-entered payment/adjustment rows so
+     * a retry or a fast double-tap can't double-post money — null for rows
+     * inserted by app code that already has its own guard (order charges and
+     * reversals live inside placeOrder's/cancelOrder's own transaction, and
+     * the stockout cascade is naturally idempotent via unit_stockouts'
+     * onConflictDoNothing).
+     */
+    idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
+    ...timestampColumns,
+  },
+  /** The balance trigger sums one store's rows on every insert. */
+  (t) => [index("suki_ledger_store_idx").on(t.storeId)],
+);
 
 export type SukiLedgerRow = typeof sukiLedger.$inferSelect;
 export type NewSukiLedgerRow = typeof sukiLedger.$inferInsert;
