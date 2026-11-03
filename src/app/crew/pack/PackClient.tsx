@@ -36,7 +36,7 @@ function PackBoard(props: { routeId: string; route: CrewRoute }) {
     { refetchInterval: 60_000 },
   );
   const [activeId, setActiveId] = useState<string | null>(null);
-  /** `${orderId}:${index}` for every line the helper has physically picked. */
+  /** `order_items.id` of every line the helper has physically picked. */
   const [checked, setChecked] = useState<Set<string>>(() => new Set());
   const [confirming, setConfirming] = useState(false);
   const [departing, setDeparting] = useState(false);
@@ -223,7 +223,7 @@ function ActiveOrder(props: {
   const { order, checked } = props;
   const dict = useDictionary();
   const items = order.items.filter((i) => !i.cancelledItem);
-  const checkedCount = items.filter((_, i) => checked.has(`${order.id}:${i}`)).length;
+  const checkedCount = items.filter((item) => checked.has(item.id)).length;
   const allChecked = items.length > 0 && checkedCount === items.length;
 
   return (
@@ -247,8 +247,8 @@ function ActiveOrder(props: {
       </div>
 
       <ul className="mt-4 space-y-2">
-        {items.map((item, i) => {
-          const key = `${order.id}:${i}`;
+        {items.map((item) => {
+          const key = item.id;
           const done = checked.has(key);
           return (
             <li key={key}>

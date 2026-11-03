@@ -2,8 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { formatManila, now } from "~/lib/datetime";
-import { posSales, productUnits, stores, sukiLedger, truckStockMovements } from "~/server/db/schema";
-import { SEED, TEST_DATABASE_URL, integrationDb } from "~/test/integrationDb";
+import { posSales, productUnits, routes, stores, sukiLedger, truckStockMovements } from "~/server/db/schema";
+import { SEED, TEST_DATABASE_URL, freshStore, integrationDb } from "~/test/integrationDb";
 
 import { createPosSale } from "./posSales";
 
@@ -15,14 +15,7 @@ describe.skipIf(!TEST_DATABASE_URL)("createPosSale (local Postgres)", () => {
   let sibuyasKiloPrice = 0n;
 
   beforeAll(async () => {
-    const [store] = await db.select().from(stores).limit(1);
-    if (!store) throw new Error("seed.sql must have created at least one store");
-    storeId = store.id;
-    // Plenty of room on the tab for the happy-path sales below.
-    await db
-      .update(stores)
-      .set({ sukiLimitCentavos: 1_000_000n })
-      .where(eq(stores.id, storeId));
+    storeId = (await freshStore(db)).id;
     const [price] = await db.query.dailyPrices.findMany({
       where: (t, { eq }) => eq(t.productUnitId, SEED.sibuyasKiloUnitId),
       orderBy: (t) => desc(t.capturedAt),
@@ -131,6 +124,31 @@ describe.skipIf(!TEST_DATABASE_URL)("createPosSale (local Postgres)", () => {
     expect(result.availableCentavos).toBe(room);
     const [after] = await db.select().from(stores).where(eq(stores.id, storeId));
     expect(after!.sukiBalanceCentavos).toBe(store!.sukiBalanceCentavos);
+  });
+
+  it("refuses a key reused on another route or another day instead of echoing the old sale", async () => {
+    const key = crypto.randomUUID();
+    const first = await createPosSale(db, STAFF_USER, {
+      routeId: SEED.routeId,
+      idempotencyKey: key,
+      storeId: null,
+      payment: "cash",
+      items: [{ productUnitId: SEED.sibuyasKiloUnitId, quantity: 1 }],
+    });
+    expect(first.ok).toBe(true);
+    // Same key, different truck: this is a *new* sale whose cart kept a stale key.
+    const [otherRoute] = await db
+      .insert(routes)
+      .values({ name: `Ruta ${key.slice(0, 8)}`, cutoffLocal: "04:30", departureLocal: "06:00" })
+      .returning({ id: routes.id });
+    const second = await createPosSale(db, STAFF_USER, {
+      routeId: otherRoute!.id,
+      idempotencyKey: key,
+      storeId: null,
+      payment: "cash",
+      items: [{ productUnitId: SEED.sibuyasKiloUnitId, quantity: 3 }],
+    });
+    expect(second).toMatchObject({ ok: false, reason: "stale_key" });
   });
 
   it("refuses a unit with no live price today", async () => {

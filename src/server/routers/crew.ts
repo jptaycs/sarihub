@@ -41,6 +41,7 @@ const SALE_REASON_TO_CODE = {
   store_not_found: "NOT_FOUND",
   suki_needs_store: "BAD_REQUEST",
   over_suki_limit: "PRECONDITION_FAILED",
+  stale_key: "CONFLICT",
 } as const;
 
 export const crewRouter = router({
@@ -107,6 +108,7 @@ export const crewRouter = router({
     const itemRows = orderIds.length
       ? await ctx.db
           .select({
+            id: orderItems.id,
             orderId: orderItems.orderId,
             nameTl: products.nameTl,
             unitLabelTl: productUnits.labelTl,
@@ -118,7 +120,7 @@ export const crewRouter = router({
           .innerJoin(products, eq(products.id, orderItems.productId))
           .innerJoin(productUnits, eq(productUnits.id, orderItems.productUnitId))
           .where(inArray(orderItems.orderId, orderIds))
-          .orderBy(asc(products.nameTl))
+          .orderBy(asc(products.nameTl), asc(productUnits.sortOrder), asc(orderItems.id))
       : [];
 
     const itemsByOrder = new Map<string, typeof itemRows>();

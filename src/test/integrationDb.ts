@@ -19,6 +19,29 @@ export function integrationDb() {
   return { db, close: () => client.end() };
 }
 
+/**
+ * A brand-new store on the seeded route with a wide-open tab, so each test
+ * file charges its own balance and files can run in parallel (and re-run)
+ * without stepping on each other.
+ */
+export async function freshStore(db: ReturnType<typeof integrationDb>["db"]) {
+  const ownerUserId = crypto.randomUUID();
+  const [store] = await db
+    .insert(schema.stores)
+    .values({
+      ownerUserId,
+      name: `Tindahan ${ownerUserId.slice(0, 8)}`,
+      ownerName: "Aling Test",
+      phoneE164: `+639${Math.floor(Math.random() * 1e9)
+        .toString()
+        .padStart(9, "0")}`,
+      routeId: SEED.routeId,
+      sukiLimitCentavos: 1_000_000n,
+    })
+    .returning();
+  return store!;
+}
+
 /** Fixed ids from drizzle/seed.sql. */
 export const SEED = {
   routeId: "aaaaaaaa-0000-0000-0000-000000000001",

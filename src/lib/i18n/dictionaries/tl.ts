@@ -505,6 +505,7 @@ export const tl = {
       overSukiLimit: "Lampas sa suki limit ng tindahan. Natitira pang {available}.",
       unknownUnit: "Hindi mahanap ang item na iyan.",
       emptySale: "Walang laman ang benta.",
+      staleKey: "Hindi naitala ang benta. Pindutin po ulit ang button.",
     },
   },
   map: {

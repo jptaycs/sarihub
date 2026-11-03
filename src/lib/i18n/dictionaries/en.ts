@@ -502,6 +502,7 @@ export const en: Dictionary = {
       overSukiLimit: "Over the store's suki limit. {available} left on the tab.",
       unknownUnit: "Can't find that item.",
       emptySale: "The sale is empty.",
+      staleKey: "The sale wasn't recorded. Please tap the button again.",
     },
   },
   map: {

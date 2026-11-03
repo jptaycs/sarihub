@@ -74,8 +74,9 @@ against a throwaway local Postgres when `TEST_DATABASE_URL` is set (they skip ot
 `pnpm test` stays green). Set one up with `createdb sarihub_test`, create the Supabase stand-ins
 (`auth` schema with `auth.users(id, phone)` and `auth.uid()`, `storage.buckets`/`storage.objects`,
 roles `authenticated`/`anon`/`service_role`), then `DATABASE_URL=<local> pnpm db:migrate`, apply
-every `drizzle/*_rls.sql` and `drizzle/seed.sql` with `psql`, and run
-`TEST_DATABASE_URL=<local> pnpm test`. Vitest aliases `server-only` to `src/test/serverOnlyStub.ts`
+every `drizzle/*_rls.sql` plus `drizzle/0008_stores_owner_update_rls_fix.sql` (hand-written, not
+journaled) and `drizzle/seed.sql` with `psql`, and run `TEST_DATABASE_URL=<local> pnpm test`
+(or just the DB-backed files with `pnpm test:integration`). Vitest aliases `server-only` to `src/test/serverOnlyStub.ts`
 so services import cleanly.
 
 Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datetime`, never `new Date()`. Tagalog-first copy in every user-facing string — but the app is bilingual (Tagalog/English) via a switcher on `/login`, so **every new user-facing string, including server-emitted tRPC/Server Action error messages, must go through `src/lib/i18n/dictionaries/{tl,en}.ts`**, never a hardcoded literal. Add the key to `tl.ts` first (canonical), then `en.ts` (TypeScript enforces the same shape). Client components read strings via `useDictionary()`/`useLocale()` from `~/lib/i18n/LanguageProvider`; Server Components and services via `getDictionary(await getServerLocale())`, threading `Locale` down as a parameter the same way `Db`/`userId` are threaded. Use `interpolate(template, vars)` for any string with a dynamic value. DB-sourced content (product names — already dual `nameTl`/`nameEn`, categories, store/owner/route names) is explicitly out of scope for the toggle; see the dictionaries' file comments for why.
@@ -139,7 +140,7 @@ Spec: `docs/superpowers/specs/2026-11-03-truck-crew-pos-design.md`. Plan: `docs/
 - [x] Admin `/admin/staff`: list, register by phone (owner must have signed in once, refuses a phone that owns a store), change role, (de)activate (never yourself)
 - [x] RLS: new tables staff-SELECT via `is_active_staff()`, UPDATE/DELETE revoked (append-only); **the same file enables RLS on `notification_queue`, which 0005 had left readable through PostgREST with the anon key**
 - [x] Verified: migration 0009 + all RLS files + seed apply cleanly to a local Postgres; service integration tests (`posSales`, `truckStock`, `orders.advanceOrderStatus`) pass against it; `next build` compiles every route
-- [ ] **Not yet applied to the live Supabase project** — its host (`vxwqearlhoklioatfygc.supabase.co`) did not resolve when this shipped. Once the project is restored or relinked: `pnpm db:migrate`, `psql -f drizzle/0009_truck_crew_pos_rls.sql`, then run `tests/e2e/crew-pos.spec.ts` and the existing specs. Creating a real `helper` account still needs the Twilio item above (only the two test-OTP numbers can sign in)
+- [ ] **Not yet applied to the live Supabase project** — its host (`vxwqearlhoklioatfygc.supabase.co`) did not resolve when this shipped. Once the project is restored or relinked: `pnpm db:migrate` (applies 0009 + 0010), then `psql -f drizzle/0009_truck_crew_pos_rls.sql` **and** `psql -f drizzle/0010_hot_path_indexes_rls.sql` (the suki-balance trigger fix lives there — skipping it leaves the lost-update bug in production), then run `tests/e2e/crew-pos.spec.ts` and the existing specs. Creating a real `helper` account still needs the Twilio item above (only the two test-OTP numbers can sign in)
 - `inventory_snapshots` / `inventory_snapshot_items` (migration 0000) are unused and superseded by `truck_stock_movements`; left in place because dropping is a destructive migration
 
 ### Hardening pass (shipped with the crew app, 2026-11-03)

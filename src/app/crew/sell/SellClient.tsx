@@ -49,7 +49,7 @@ export function SellClient() {
 function SellBoard(props: { routeId: string }) {
   const dict = useDictionary();
   const catalogQuery = trpc.catalog.today.useQuery();
-  const { cart, setQuantity, clear } = useCart(SALE_CART_KEY);
+  const { cart, setQuantity, clear, rotateKey } = useCart(SALE_CART_KEY);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<ProductCategory | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -176,6 +176,7 @@ function SellBoard(props: { routeId: string }) {
           idempotencyKey={cart.idempotencyKey}
           setQuantity={setQuantity}
           onDone={clear}
+          onStaleKey={rotateKey}
           onClose={() => setSheetOpen(false)}
         />
       )}
@@ -261,6 +262,7 @@ function SaleSheet(props: {
   idempotencyKey: string;
   setQuantity: (unitId: string, qty: number) => void;
   onDone: () => void;
+  onStaleKey: () => void;
   onClose: () => void;
 }) {
   const { lines, total } = props;
@@ -272,9 +274,17 @@ function SaleSheet(props: {
   const [payment, setPayment] = useState<"cash" | "suki">("cash");
   const [tendered, setTendered] = useState("");
   const sell = trpc.crew.sell.useMutation({
-    onSuccess() {
+    onSuccess(data) {
       void utils.crew.stock.invalidate();
       void utils.crew.salesToday.invalidate();
+      void utils.crew.storeSearch.invalidate();
+      // Retire the cart (and its key) the moment the sale lands, not when the
+      // success sheet is dismissed — a killed PWA must not carry this key
+      // into tomorrow's sale and get this one echoed back as "Nabenta!".
+      if (data.ok) props.onDone();
+    },
+    onError(error) {
+      if (error.data?.code === "CONFLICT") props.onStaleKey();
     },
   });
 
@@ -284,15 +294,15 @@ function SaleSheet(props: {
   }, [store, payment]);
 
   const tenderedCentavos = pesosToCentavos(tendered);
+  /** Sukli preview while ringing up; the success sheet recomputes from the server-locked total. */
   const change = tenderedCentavos !== null ? BigInt(tenderedCentavos) - total : null;
   const sukiRoom = store ? store.sukiLimitCentavos - store.sukiBalanceCentavos : null;
 
   if (sell.data?.ok) {
     const sale = sell.data.sale;
-    const finish = () => {
-      props.onDone();
-      props.onClose();
-    };
+    // Cash changes hands against what the server actually charged.
+    const changeDue = tenderedCentavos !== null ? BigInt(tenderedCentavos) - sale.totalCentavos : null;
+    const finish = () => props.onClose();
     return (
       <CrewSheet title={dict.crew.sell.soldTitle} onClose={finish}>
         <div className="py-4 text-center">
@@ -307,9 +317,9 @@ function SaleSheet(props: {
                   name: store?.ownerName ?? "",
                 })}
           </p>
-          {sale.payment === "cash" && change !== null && change >= 0n && (
+          {sale.payment === "cash" && changeDue !== null && changeDue >= 0n && (
             <p className="price mt-1 text-[15px] text-ink-2">
-              {dict.crew.sell.changeLabel}: <span className="font-semibold text-ink">{formatPeso(change)}</span>
+              {dict.crew.sell.changeLabel}: <span className="font-semibold text-ink">{formatPeso(changeDue)}</span>
             </p>
           )}
           <Button size="lg" block className="mt-6" onClick={finish}>

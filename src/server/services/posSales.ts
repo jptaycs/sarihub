@@ -51,7 +51,8 @@ export type CreatePosSaleResult =
         | "no_price_today"
         | "store_not_found"
         | "suki_needs_store"
-        | "over_suki_limit";
+        | "over_suki_limit"
+        | "stale_key";
       message: string;
       /** For over_suki_limit: how much tab room is left, so the UI can say it. */
       availableCentavos?: bigint;
@@ -163,10 +164,21 @@ export async function createPosSale(
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${input.idempotencyKey}))`);
 
     const [existing] = await tx
-      .select({ id: posSales.id, totalCentavos: posSales.totalCentavos, payment: posSales.payment })
+      .select({
+        id: posSales.id,
+        totalCentavos: posSales.totalCentavos,
+        payment: posSales.payment,
+        routeId: posSales.routeId,
+        soldOn: posSales.soldOn,
+      })
       .from(posSales)
       .where(eq(posSales.idempotencyKey, input.idempotencyKey))
       .limit(1);
+    if (existing && (existing.routeId !== input.routeId || existing.soldOn !== dayStr)) {
+      // Same key, different truck or day: a cart that kept yesterday's key.
+      // Echoing the old sale here would let today's goods leave unrecorded.
+      return { ok: false as const, reason: "stale_key" as const, message: dict.errors.staleKey };
+    }
     if (existing) {
       return {
         ok: true as const,

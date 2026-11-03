@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { notificationQueue, orders, stores } from "~/server/db/schema";
-import { SEED, TEST_DATABASE_URL, integrationDb } from "~/test/integrationDb";
+import { notificationQueue, orders } from "~/server/db/schema";
+import { SEED, TEST_DATABASE_URL, freshStore, integrationDb } from "~/test/integrationDb";
 
 import { cancelOrder, placeOrder } from "./orders";
 
@@ -12,23 +12,9 @@ describe.skipIf(!TEST_DATABASE_URL)("placeOrder / cancelOrder (local Postgres)",
   let otherOwnerUserId = "";
 
   beforeAll(async () => {
-    const [store] = await db.select().from(stores).limit(1);
-    if (!store) throw new Error("seed.sql must have created a store");
-    ownerUserId = store.ownerUserId;
-    await db.update(stores).set({ sukiLimitCentavos: 1_000_000n }).where(eq(stores.id, store.id));
-
+    ownerUserId = (await freshStore(db)).ownerUserId;
     // A second store on the same route, owned by someone else.
-    otherOwnerUserId = crypto.randomUUID();
-    await db.insert(stores).values({
-      ownerUserId: otherOwnerUserId,
-      name: `Tindahan ${otherOwnerUserId.slice(0, 8)}`,
-      ownerName: "Mang Kanto",
-      phoneE164: `+639${Math.floor(Math.random() * 1e9)
-        .toString()
-        .padStart(9, "0")}`,
-      routeId: SEED.routeId,
-      sukiLimitCentavos: 1_000_000n,
-    });
+    otherOwnerUserId = (await freshStore(db)).ownerUserId;
   });
 
   afterAll(async () => {
