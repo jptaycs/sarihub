@@ -11,7 +11,6 @@ import {
   CookingPot,
   Egg,
   Fish,
-  Minus,
   Plus,
   Search,
   ShoppingBag,
@@ -22,6 +21,7 @@ import {
 
 import { Button } from "~/components/ui/Button";
 import { Wordmark } from "~/components/ui/Logo";
+import { Stepper } from "~/components/ui/Stepper";
 import { cn } from "~/lib/cn";
 import { loginHref } from "~/lib/safeNext";
 import { formatManila, now, toManila } from "~/lib/datetime";
@@ -482,35 +482,6 @@ function ProductCard(props: {
         })}
       </ul>
     </article>
-  );
-}
-
-function Stepper(props: {
-  qty: number;
-  onChange: (qty: number) => void;
-  decreaseLabel: string;
-  increaseLabel: string;
-}) {
-  return (
-    <span className="animate-pop-in inline-flex h-11 shrink-0 items-center rounded-pill bg-action text-white">
-      <button
-        type="button"
-        aria-label={props.decreaseLabel}
-        onClick={() => props.onChange(props.qty - 1)}
-        className="flex h-11 w-11 items-center justify-center rounded-full active:bg-white/15"
-      >
-        <Minus size={20} strokeWidth={2.5} />
-      </button>
-      <span className="tnum min-w-7 text-center text-[17px] font-bold">{props.qty}</span>
-      <button
-        type="button"
-        aria-label={props.increaseLabel}
-        onClick={() => props.onChange(props.qty + 1)}
-        className="flex h-11 w-11 items-center justify-center rounded-full active:bg-white/15"
-      >
-        <Plus size={20} strokeWidth={2.5} />
-      </button>
-    </span>
   );
 }
 
