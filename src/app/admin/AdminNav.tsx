@@ -9,9 +9,11 @@ import {
   CircleUser,
   Ellipsis,
   Package,
+  ShoppingCart,
   Store,
   Tag,
   Truck,
+  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -25,19 +27,21 @@ import { AdminSheet } from "./_components/ui";
 
 type NavLink = { href: Route; label: string; icon: LucideIcon };
 
-/** The four admin sections — shared by the sidebar and the phone tab bar. */
+/** The five admin sections — shared by the sidebar and the phone tab bar. */
 function sectionLinks(dict: Dictionary): NavLink[] {
   return [
     { href: "/admin/orders", label: dict.admin.nav.orders, icon: Truck },
     { href: "/admin/catalog", label: dict.admin.nav.catalog, icon: Package },
     { href: "/admin/suki", label: dict.admin.nav.suki, icon: Wallet },
     { href: "/admin/stores", label: dict.admin.nav.stores, icon: Store },
+    { href: "/admin/staff", label: dict.admin.nav.staff, icon: Users },
   ];
 }
 
 /** Secondary destinations outside /admin (sidebar footer, phone "Menu" sheet). */
 function extraLinks(dict: Dictionary): NavLink[] {
   return [
+    { href: "/crew", label: dict.admin.nav.crew, icon: ShoppingCart },
     { href: "/buyer/prices", label: dict.admin.nav.prices, icon: Tag },
     { href: "/profile", label: dict.admin.nav.profile, icon: CircleUser },
   ];

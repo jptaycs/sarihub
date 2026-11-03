@@ -27,7 +27,9 @@ export default async function ProfilePage() {
         ? dict.profile.roleAdmin
         : staffRow.role === "buyer"
           ? dict.profile.roleBuyer
-          : dict.profile.roleDriver;
+          : staffRow.role === "helper"
+            ? dict.profile.roleHelper
+            : dict.profile.roleDriver;
 
     return (
       <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-10">

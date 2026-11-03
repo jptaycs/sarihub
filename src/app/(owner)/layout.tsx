@@ -21,6 +21,9 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
   if (staffRow?.role === "driver") {
     redirect("/driver");
   }
+  if (staffRow?.role === "helper") {
+    redirect("/crew");
+  }
 
   const supabase = await createSupabaseServer();
   const {

@@ -78,10 +78,21 @@ export const adminProcedure = staffProcedure.use(async ({ ctx, next }) => {
   return next();
 });
 
-/** Driver screens: today's stops, delivery confirmation. Admins can cover a route. */
+/**
+ * Driver screens: today's stops, delivery confirmation. The truck helper rides
+ * along and hands goods over too (crew app's Deliver tab); admins can cover a route.
+ */
 export const driverProcedure = staffProcedure.use(async ({ ctx, next }) => {
-  if (ctx.staff.role !== "driver" && ctx.staff.role !== "admin") {
+  if (ctx.staff.role !== "driver" && ctx.staff.role !== "helper" && ctx.staff.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: getDictionary(ctx.locale).common.errors.driverOnly });
+  }
+  return next();
+});
+
+/** Crew screens (/crew): pack, truck stock, POS. Helper role, or an admin covering. */
+export const crewProcedure = staffProcedure.use(async ({ ctx, next }) => {
+  if (ctx.staff.role !== "helper" && ctx.staff.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: getDictionary(ctx.locale).common.errors.crewOnly });
   }
   return next();
 });

@@ -7,10 +7,13 @@ import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
 import { activeStaffForRequest } from "~/server/services/auth";
 
-/** Driver area: one hand on the wheel, phone in the other. Driver staff only. */
+/** Driver area: one hand on the wheel, phone in the other. Driver (or helper/admin) staff only. */
 export default async function DriverLayout({ children }: { children: React.ReactNode }) {
   const staffRow = await activeStaffForRequest();
-  if (!staffRow || (staffRow.role !== "driver" && staffRow.role !== "admin")) {
+  if (
+    !staffRow ||
+    (staffRow.role !== "driver" && staffRow.role !== "helper" && staffRow.role !== "admin")
+  ) {
     redirect("/home");
   }
   const dict = getDictionary(await getServerLocale());
