@@ -7,11 +7,13 @@ import { formatManila, fromManila, now } from "~/lib/datetime";
 import { parsePhPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import {
+  createStaffInput,
   createStoreInput,
   importCsvInput,
   recordAdjustmentInput,
   recordPaymentInput,
   setOrderStatusInput,
+  updateStaffInput,
   updateStoreInput,
   upsertProductInput,
   upsertUnitInput,
@@ -407,9 +409,92 @@ const storesAdminRouter = router({
   }),
 });
 
+const staffAdminRouter = router({
+  list: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db
+      .select({
+        id: staff.id,
+        userId: staff.userId,
+        name: staff.name,
+        phoneE164: staff.phoneE164,
+        role: staff.role,
+        isActive: staff.isActive,
+      })
+      .from(staff)
+      .orderBy(asc(staff.name));
+  }),
+
+  /**
+   * Register a staff member. Same door as stores: phone-OTP is the only auth,
+   * so the person must have signed in once; their auth user is looked up by
+   * phone. A phone that already owns a store is refused — one auth user is
+   * either an owner or staff, never both.
+   */
+  create: adminProcedure.input(createStaffInput).mutation(async ({ ctx, input }) => {
+    const dict = getDictionary(ctx.locale).admin.errors;
+    const phoneE164 = parsePhPhone(input.phone);
+    if (!phoneE164) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: dict.invalidPhone });
+    }
+
+    const authUsers = await ctx.db.execute<{ id: string }>(
+      sql`SELECT id FROM auth.users WHERE phone = ${phoneE164.slice(1)} LIMIT 1`,
+    );
+    const authUser = authUsers[0];
+    if (!authUser) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.noAccountForPhone });
+    }
+
+    const [ownsStore] = await ctx.db
+      .select({ id: stores.id })
+      .from(stores)
+      .where(eq(stores.ownerUserId, authUser.id))
+      .limit(1);
+    if (ownsStore) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.phoneIsOwner });
+    }
+
+    try {
+      const [created] = await ctx.db
+        .insert(staff)
+        .values({ userId: authUser.id, name: input.name, phoneE164, role: input.role })
+        .returning({ id: staff.id });
+      return { id: created!.id };
+    } catch (error) {
+      // 23505: the phone or auth user is already staff.
+      if (error instanceof Error && "code" in error && error.code === "23505") {
+        throw new TRPCError({ code: "CONFLICT", message: dict.staffAlreadyExists });
+      }
+      throw error;
+    }
+  }),
+
+  /** Rename, change role, or (de)activate. An admin can't lock themselves out. */
+  update: adminProcedure.input(updateStaffInput).mutation(async ({ ctx, input }) => {
+    const dict = getDictionary(ctx.locale).admin.errors;
+    const [target] = await ctx.db
+      .select({ userId: staff.userId })
+      .from(staff)
+      .where(eq(staff.id, input.id))
+      .limit(1);
+    if (!target) {
+      throw new TRPCError({ code: "NOT_FOUND", message: dict.staffNotFound });
+    }
+    if (target.userId === ctx.staff.userId && (!input.isActive || input.role !== "admin")) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.cannotDeactivateSelf });
+    }
+    await ctx.db
+      .update(staff)
+      .set({ name: input.name, role: input.role, isActive: input.isActive })
+      .where(eq(staff.id, input.id));
+    return { id: input.id };
+  }),
+});
+
 export const adminRouter = router({
   orders: ordersAdminRouter,
   catalog: catalogAdminRouter,
   suki: sukiAdminRouter,
   stores: storesAdminRouter,
+  staff: staffAdminRouter,
 });
