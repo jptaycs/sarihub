@@ -97,3 +97,22 @@ export const importCsvInput = z.object({
   csv: z.string().trim().min(1, "Walang laman ang file."),
 });
 export type ImportCsvInput = z.infer<typeof importCsvInput>;
+
+/** Staff roles an admin can hand out. Mirrors the `staff_role` enum. */
+export const staffRoleInput = z.enum(["buyer", "admin", "driver", "helper"]);
+
+export const createStaffInput = z.object({
+  name: z.string().trim().min(1).max(120),
+  /** Any PH-mobile spelling; parsed to E.164 server-side. */
+  phone: z.string().trim().min(1),
+  role: staffRoleInput,
+});
+export type CreateStaffInput = z.infer<typeof createStaffInput>;
+
+export const updateStaffInput = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1).max(120),
+  role: staffRoleInput,
+  isActive: z.boolean(),
+});
+export type UpdateStaffInput = z.infer<typeof updateStaffInput>;

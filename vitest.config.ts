@@ -8,6 +8,9 @@ export default defineConfig({
     exclude: ["node_modules", ".next", "tests/e2e/**"],
   },
   resolve: {
-    alias: { "~": resolve(__dirname, "./src") },
+    alias: {
+      "~": resolve(__dirname, "./src"),
+      "server-only": resolve(__dirname, "./src/test/serverOnlyStub.ts"),
+    },
   },
 });
