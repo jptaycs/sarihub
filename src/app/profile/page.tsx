@@ -3,6 +3,8 @@ import { LanguageSwitcher } from "~/components/ui/LanguageSwitcher";
 import { OwnerTabBar } from "~/components/ui/OwnerTabBar";
 import { PageHeader } from "~/components/ui/PageHeader";
 import { SignOutButton } from "~/components/ui/SignOutButton";
+
+import { SukiActivity } from "./SukiActivity";
 import { formatPeso, formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
@@ -123,6 +125,8 @@ export default async function ProfilePage() {
                 </span>
               </CardRow>
             </Card>
+
+            <SukiActivity />
           </>
         ) : (
           <div className="mt-2 rounded-md bg-warning-soft px-4 py-3 text-[14px] text-warning">
