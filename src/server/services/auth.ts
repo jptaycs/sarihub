@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, eq } from "drizzle-orm";
 
 import { createSupabaseServer } from "~/lib/supabase/server";
@@ -10,15 +11,26 @@ import { db } from "~/server/db";
 import { staff, type Staff } from "~/server/db/schema";
 
 /**
- * The active staff row for the signed-in user, or null for owners and guests.
- * Server Components use this to keep buyer/admin/driver screens off owner
- * accounts; tRPC has its own staffProcedure doing the same check.
+ * The signed-in Supabase user for this request, or null. `supabase.auth.getUser()`
+ * is a network round trip to Supabase Auth; a layout, its page and the first
+ * tRPC batch each used to pay it. `cache` dedupes it to once per request.
  */
-export async function activeStaffForRequest(): Promise<Staff | null> {
+export const getRequestUser = cache(async () => {
   const supabase = await createSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return user;
+});
+
+/**
+ * The active staff row for the signed-in user, or null for owners and guests.
+ * Server Components use this to keep buyer/admin/driver screens off owner
+ * accounts; tRPC has its own staffProcedure doing the same check. Cached per
+ * request, so a layout and its page share one lookup.
+ */
+export const activeStaffForRequest = cache(async (): Promise<Staff | null> => {
+  const user = await getRequestUser();
   if (!user) return null;
 
   const [row] = await db
@@ -27,7 +39,7 @@ export async function activeStaffForRequest(): Promise<Staff | null> {
     .where(and(eq(staff.userId, user.id), eq(staff.isActive, true)))
     .limit(1);
   return row ?? null;
-}
+});
 
 export type StartOtpResult =
   | { ok: true; phoneE164: string }

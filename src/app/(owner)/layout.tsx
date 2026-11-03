@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { OwnerTabBar } from "~/components/ui/OwnerTabBar";
-import { createSupabaseServer } from "~/lib/supabase/server";
-import { activeStaffForRequest } from "~/server/services/auth";
+import { activeStaffForRequest, getRequestUser } from "~/server/services/auth";
 
 /**
  * Owner app shell: /home, /orders, /orders/[id]. Staff sign in through the
@@ -25,10 +24,7 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     redirect("/crew");
   }
 
-  const supabase = await createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
 
   return (
     <>

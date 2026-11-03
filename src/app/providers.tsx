@@ -20,7 +20,10 @@ export function Providers({
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30_000, refetchOnWindowFocus: false },
+          // Focus refetch only fires for stale queries (>30s), so a PWA
+          // resumed from the background shows a fresh balance/status
+          // without hammering the API while the user is active.
+          queries: { staleTime: 30_000, refetchOnWindowFocus: true, refetchOnReconnect: true },
         },
       }),
   );

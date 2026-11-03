@@ -7,10 +7,14 @@
  *   content-hashed or immutable enough for a sari-sari morning.
  * - Never touches /api or /auth: money and sessions don't get cached.
  *
- * Bump VERSION to invalidate every cache on the next deploy.
+ * Bump VERSION to invalidate every cache on the next deploy. Only the
+ * public/role landing shells are cached as navigations — never an order
+ * detail, a ledger or an admin page, which would otherwise be served from
+ * disk to the next person holding a shared phone after sign-out.
  */
-const VERSION = "sarihub-v1";
+const VERSION = "sarihub-v2";
 const OFFLINE_URL = "/offline";
+const CACHEABLE_SHELLS = new Set(["/", "/home", "/buyer/prices", "/driver", "/crew/pack", OFFLINE_URL]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -28,6 +32,13 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// The profile page's sign-out posts this so a shared phone forgets the shells.
+self.addEventListener("message", (event) => {
+  if (event.data === "sarihub:clear-caches") {
+    event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))));
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -40,7 +51,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && CACHEABLE_SHELLS.has(url.pathname)) {
             const copy = response.clone();
             caches.open(VERSION).then((cache) => cache.put(request, copy));
           }

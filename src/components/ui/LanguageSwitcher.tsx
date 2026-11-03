@@ -29,7 +29,7 @@ function LangButton(props: { active: boolean; onClick: () => void; children: Rea
       onClick={props.onClick}
       aria-pressed={props.active}
       className={cn(
-        "h-9 rounded-pill px-4 text-[14px] font-semibold transition-all",
+        "h-11 rounded-pill px-4 text-[14px] font-semibold transition-all",
         props.active ? "bg-surface text-ink shadow-[0_1px_3px_rgba(0,0,0,0.12)]" : "text-ink-2",
       )}
     >

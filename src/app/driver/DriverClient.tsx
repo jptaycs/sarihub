@@ -55,7 +55,7 @@ export function DriverClient() {
   return (
     <div className="animate-fade-in pt-4">
       <h1 className="title-large">{dict.driver.title}</h1>
-      <p className="mt-1 text-[15px] text-ink-2">{formatManilaDate(day, locale)}</p>
+      <p className="text-ink-2 mt-1 text-[15px]">{formatManilaDate(day, locale)}</p>
 
       {routes.length > 1 && (
         <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -66,10 +66,10 @@ export function DriverClient() {
               aria-pressed={routeId === r.id}
               onClick={() => setPickedRouteId(r.id)}
               className={cn(
-                "tnum h-tap shrink-0 rounded-pill px-5 text-[15px] font-semibold transition-transform active:scale-[0.97]",
+                "tnum h-tap rounded-pill shrink-0 px-5 text-[15px] font-semibold transition-transform active:scale-[0.97]",
                 routeId === r.id
                   ? "bg-action text-white"
-                  : "bg-surface text-ink shadow-[var(--shadow-card)] active:bg-surface-2",
+                  : "bg-surface text-ink active:bg-surface-2 shadow-[var(--shadow-card)]",
               )}
             >
               {r.name} · {r.deliveredCount}/{r.stopCount}
@@ -92,7 +92,7 @@ function StatusText(props: { children: React.ReactNode; danger?: boolean }) {
     <p
       className={cn(
         "pt-16 text-center text-[15px]",
-        props.danger ? "font-medium text-danger" : "text-ink-2",
+        props.danger ? "text-danger font-medium" : "text-ink-2",
       )}
     >
       {props.children}
@@ -129,27 +129,27 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
   return (
     <div className="mt-5">
       <Card className="p-5">
-        <div className="flex items-center gap-2 text-[14px] text-ink-2">
+        <div className="text-ink-2 flex items-center gap-2 text-[14px]">
           <Truck size={18} strokeWidth={1.75} className="shrink-0" />
           <span className="truncate">
             {route?.name}
             {route?.vehiclePlate ? ` · ${route.vehiclePlate}` : ""}
           </span>
         </div>
-        <div className="tnum mt-2 text-[28px] font-bold leading-tight tracking-tight">
+        <div className="tnum mt-2 text-[28px] leading-tight font-bold tracking-tight">
           {interpolate(dict.driver.delivered, { delivered: delivered.length, total: stops.length })}
         </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-pill bg-surface-2">
+        <div className="rounded-pill bg-surface-2 mt-3 h-2 overflow-hidden">
           <div
             className={cn(
-              "h-full rounded-pill transition-[width] duration-500",
+              "rounded-pill h-full transition-[width] duration-500",
               allDone ? "bg-success" : "bg-action",
             )}
             style={{ width: `${progressPct}%` }}
           />
         </div>
         {allDone && (
-          <p className="animate-fade-in mt-4 flex items-center gap-2 text-[15px] font-semibold text-success">
+          <p className="animate-fade-in text-success mt-4 flex items-center gap-2 text-[15px] font-semibold">
             <CheckCircle2 size={22} className="shrink-0" />
             {dict.driver.allDelivered}
           </p>
@@ -185,16 +185,12 @@ function StopCard(props: { stop: Stop; index: number; isNext: boolean }) {
 
   return (
     <Card
-      className={cn(
-        "p-5 transition-opacity",
-        done && "opacity-55",
-        isNext && "ring-2 ring-action",
-      )}
+      className={cn("p-5 transition-opacity", done && "opacity-55", isNext && "ring-action ring-2")}
     >
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "tnum flex h-10 w-10 shrink-0 items-center justify-center rounded-pill text-[17px] font-bold",
+            "tnum rounded-pill flex h-10 w-10 shrink-0 items-center justify-center text-[17px] font-bold",
             done
               ? "bg-success-soft text-success"
               : isNext
@@ -205,26 +201,26 @@ function StopCard(props: { stop: Stop; index: number; isNext: boolean }) {
           {done ? <Check size={20} strokeWidth={3} /> : index}
         </span>
         <div className="min-w-0 flex-1">
-          {isNext && <div className="section-label mb-1 text-ink">{dict.driver.nextStop}</div>}
+          {isNext && <div className="section-label text-ink mb-1">{dict.driver.nextStop}</div>}
           <div className="flex items-start justify-between gap-2">
-            <span className="text-[19px] font-semibold leading-tight tracking-tight">
+            <span className="text-[19px] leading-tight font-semibold tracking-tight">
               {stop.storeName}
             </span>
             <span className="price shrink-0 text-[17px] font-semibold">
               {formatPeso(stop.totalCentavos)}
             </span>
           </div>
-          <div className="mt-1 text-[15px] text-ink-2">
+          <div className="text-ink-2 mt-1 text-[15px]">
             {stop.ownerName} · <span className="tnum">{formatPhone(stop.phoneE164)}</span>
           </div>
           {stop.addressLine && (
-            <div className="mt-0.5 text-[14px] text-ink-2">{stop.addressLine}</div>
+            <div className="text-ink-2 mt-0.5 text-[14px]">{stop.addressLine}</div>
           )}
         </div>
       </div>
 
       {activeItems.length > 0 && (
-        <ul className="mt-4 space-y-1 rounded-md bg-surface-2 px-4 py-3 text-[15px]">
+        <ul className="bg-surface-2 mt-4 space-y-1 rounded-md px-4 py-3 text-[15px]">
           {activeItems.map((i, n) => (
             <li key={n} className="flex justify-between gap-3">
               <span className="min-w-0">
@@ -291,6 +287,8 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [hasSignature, setHasSignature] = useState(false);
   const [uploading, setUploading] = useState(false);
+  /** Paths that already made it up, so a retry after a failed mutation skips the uploads. */
+  const [uploaded, setUploaded] = useState<{ photo?: string; signature?: string }>({});
   const signatureBox = useRef<HTMLDivElement | null>(null);
 
   // Thumbnail so the driver can see the photo actually took.
@@ -305,20 +303,26 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
 
   const submit = async () => {
     setUploading(true);
-    // Best-effort uploads: a dead zone must not strand the handoff.
-    let podPhotoPath: string | undefined;
-    let podSignaturePath: string | undefined;
-    if (photo) {
-      const uploaded = await uploadPod(`${stop.id}/photo-${Date.now()}.jpg`, photo);
-      if (uploaded) podPhotoPath = uploaded;
-    }
-    if (hasSignature && signatureBox.current) {
-      const blob = await signatureBlob(signatureBox.current);
-      if (blob) {
-        const uploaded = await uploadPod(`${stop.id}/signature-${Date.now()}.png`, blob);
-        if (uploaded) podSignaturePath = uploaded;
-      }
-    }
+    // Best-effort uploads, side by side (each has its own 15 s cap), under
+    // stable per-order paths so a retry overwrites instead of piling up.
+    // A dead zone must not strand the handoff.
+    const [podPhotoPath, podSignaturePath] = await Promise.all([
+      uploaded.photo
+        ? Promise.resolve(uploaded.photo)
+        : photo
+          ? uploadPod(`${stop.id}/photo.jpg`, photo).then((p) => p ?? undefined)
+          : Promise.resolve(undefined),
+      uploaded.signature
+        ? Promise.resolve(uploaded.signature)
+        : hasSignature && signatureBox.current
+          ? signatureBlob(signatureBox.current).then((blob) =>
+              blob
+                ? uploadPod(`${stop.id}/signature.png`, blob).then((p) => p ?? undefined)
+                : undefined,
+            )
+          : Promise.resolve(undefined),
+    ]);
+    setUploaded({ photo: podPhotoPath, signature: podSignaturePath });
     setUploading(false);
     markDelivered.mutate({ orderId: stop.id, podPhotoPath, podSignaturePath });
   };
@@ -334,13 +338,13 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
       <div
         role="dialog"
         aria-modal="true"
-        className="animate-sheet-up relative max-h-[92dvh] w-full max-w-[440px] overflow-y-auto rounded-t-xl bg-surface px-5 pb-[max(env(safe-area-inset-bottom),20px)] pt-3 shadow-[var(--shadow-float)]"
+        className="animate-sheet-up bg-surface relative max-h-[92dvh] w-full max-w-[440px] overflow-y-auto rounded-t-xl px-5 pt-3 pb-[max(env(safe-area-inset-bottom),20px)] shadow-[var(--shadow-float)]"
       >
-        <div className="mx-auto mb-4 h-1.5 w-10 rounded-pill bg-hair-strong" />
-        <h2 className="text-[24px] font-bold leading-tight tracking-tight">
+        <div className="rounded-pill bg-hair-strong mx-auto mb-4 h-1.5 w-10" />
+        <h2 className="text-[24px] leading-tight font-bold tracking-tight">
           {interpolate(dict.driver.podHeadingFor, { name: stop.ownerName })}
         </h2>
-        <p className="mt-1.5 text-[15px] text-ink-2">
+        <p className="text-ink-2 mt-1.5 text-[15px]">
           {interpolate(dict.driver.podSubtitle, { price: formatPeso(stop.totalCentavos) })}
         </p>
 
@@ -350,8 +354,8 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
             className={cn(
               "flex w-full cursor-pointer items-center gap-3 rounded-md text-[16px] font-semibold transition-transform active:scale-[0.99]",
               photo
-                ? "bg-success-soft p-2 pr-4 text-success"
-                : "h-16 justify-center border-2 border-dashed border-hair-strong bg-surface-2 text-ink active:bg-hair",
+                ? "bg-success-soft text-success p-2 pr-4"
+                : "border-hair-strong bg-surface-2 text-ink active:bg-hair h-16 justify-center border-2 border-dashed",
             )}
           >
             {photoUrl && (
@@ -377,21 +381,20 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
         </div>
 
         {markDelivered.error && (
-          <p className="mt-3 text-[14px] font-medium text-danger">
-            {markDelivered.error.message}
-          </p>
+          <p className="text-danger mt-3 text-[14px] font-medium">{markDelivered.error.message}</p>
         )}
 
-        <Button
-          size="lg"
-          block
-          className="mt-5 h-16 text-[19px]"
-          disabled={busy}
-          onClick={submit}
-        >
+        <Button size="lg" block className="mt-5 h-16 text-[19px]" disabled={busy} onClick={submit}>
           {busy ? dict.driver.submitting : dict.driver.doneButton}
         </Button>
-        <Button variant="ghost" size="lg" block className="mt-2" disabled={busy} onClick={props.onClose}>
+        <Button
+          variant="ghost"
+          size="lg"
+          block
+          className="mt-2"
+          disabled={busy}
+          onClick={props.onClose}
+        >
           {dict.driver.back}
         </Button>
       </div>

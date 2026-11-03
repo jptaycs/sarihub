@@ -43,24 +43,28 @@ export const catalogRouter = router({
           .limit(1)
       : [];
     const deliveryDayStr = formatManila(store ? nextDeliveryDate(store, at) : at, "yyyy-MM-dd");
-    const stockouts = await stockoutsForDay(ctx.db, deliveryDayStr);
 
-    const rows = await ctx.db
-      .select({
-        productId: products.id,
-        nameTl: products.nameTl,
-        nameEn: products.nameEn,
-        category: products.category,
-        isPerishable: products.isPerishable,
-        unitId: productUnits.id,
-        unitLabelTl: productUnits.labelTl,
-        unitLabelEn: productUnits.labelEn,
-        unitSortOrder: productUnits.sortOrder,
-      })
-      .from(products)
-      .innerJoin(productUnits, eq(productUnits.productId, products.id))
-      .where(and(eq(products.isActive, true), eq(productUnits.isActive, true)))
-      .orderBy(asc(products.category), asc(products.nameTl), asc(productUnits.sortOrder));
+    // Stockouts and the catalog don't depend on each other — one round trip
+    // across the region instead of two on the owner's first paint.
+    const [stockouts, rows] = await Promise.all([
+      stockoutsForDay(ctx.db, deliveryDayStr),
+      ctx.db
+        .select({
+          productId: products.id,
+          nameTl: products.nameTl,
+          nameEn: products.nameEn,
+          category: products.category,
+          isPerishable: products.isPerishable,
+          unitId: productUnits.id,
+          unitLabelTl: productUnits.labelTl,
+          unitLabelEn: productUnits.labelEn,
+          unitSortOrder: productUnits.sortOrder,
+        })
+        .from(products)
+        .innerJoin(productUnits, eq(productUnits.productId, products.id))
+        .where(and(eq(products.isActive, true), eq(productUnits.isActive, true)))
+        .orderBy(asc(products.category), asc(products.nameTl), asc(productUnits.sortOrder)),
+    ]);
 
     const unitIds = rows.map((r) => r.unitId);
     const priceRows = unitIds.length

@@ -18,6 +18,13 @@ export function SignOutButton() {
     setPending(true);
     const supabase = createSupabaseBrowser();
     await supabase.auth.signOut();
+    // Shared budget phones: the next person must not get this session's
+    // cached shells from the service worker.
+    try {
+      navigator.serviceWorker?.controller?.postMessage("sarihub:clear-caches");
+    } catch {
+      // No service worker — nothing cached.
+    }
     router.push("/login");
     router.refresh();
   }

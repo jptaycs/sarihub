@@ -29,7 +29,8 @@ export function OrderDetailClient(props: { orderId: string }) {
   const utils = trpc.useUtils();
   const orderQuery = trpc.orders.get.useQuery(
     { orderId: props.orderId },
-    { retry: false },
+    // A real NOT_FOUND won't change on retry; a dropped packet will.
+    { retry: (count, error) => error.data?.code !== "NOT_FOUND" && count < 3 },
   );
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const cancel = trpc.orders.cancel.useMutation({
@@ -45,9 +46,12 @@ export function OrderDetailClient(props: { orderId: string }) {
     return <div className="h-64 animate-pulse rounded-lg bg-surface" />;
   }
   if (orderQuery.error || !orderQuery.data) {
+    const notFound = orderQuery.error?.data?.code === "NOT_FOUND";
     return (
       <div className="pt-10 text-center">
-        <p className="text-[15px] text-ink-2">{dict.orderDetail.notFound}</p>
+        <p className={notFound ? "text-[15px] text-ink-2" : "text-[15px] font-medium text-danger"}>
+          {notFound ? dict.orderDetail.notFound : dict.common.connectionError}
+        </p>
         <Link href="/orders" className="mt-3 inline-block text-[15px] font-semibold text-ink">
           {dict.orderDetail.backLink}
         </Link>

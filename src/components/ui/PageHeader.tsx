@@ -27,7 +27,7 @@ export function PageHeader(props: {
           <Link
             href={props.backHref}
             aria-label={props.backLabel}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 transition-transform active:scale-95"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-2 transition-transform active:scale-95"
           >
             <ChevronLeft size={20} strokeWidth={2.25} />
           </Link>

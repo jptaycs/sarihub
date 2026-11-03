@@ -1,4 +1,4 @@
-import { createSupabaseServer } from "~/lib/supabase/server";
+import { getRequestUser } from "~/server/services/auth";
 
 import { HomeClient } from "./HomeClient";
 
@@ -8,10 +8,7 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ checkout?: string }>;
 }) {
-  const supabase = await createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   const { checkout } = await searchParams;
 
   return (

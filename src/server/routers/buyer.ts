@@ -61,6 +61,7 @@ export const buyerRouter = router({
                    row_number() OVER (PARTITION BY product_unit_id ORDER BY captured_at DESC) AS rn
             FROM daily_prices
             WHERE captured_at <= ${at.toISOString()}
+              AND captured_at > ${at.toISOString()}::timestamptz - interval '30 days'
           ) ranked
           WHERE rn <= 2
           ORDER BY product_unit_id, rn`,

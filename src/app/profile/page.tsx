@@ -8,9 +8,8 @@ import { SukiActivity } from "./SukiActivity";
 import { formatPeso, formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
-import { createSupabaseServer } from "~/lib/supabase/server";
 import { db } from "~/server/db";
-import { activeStaffForRequest } from "~/server/services/auth";
+import { activeStaffForRequest, getRequestUser } from "~/server/services/auth";
 import { getStoreForOwner } from "~/server/services/store";
 
 /**
@@ -67,10 +66,7 @@ export default async function ProfilePage() {
     );
   }
 
-  const supabase = await createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   const store = user ? await getStoreForOwner(db, user.id) : null;
 
   return (
