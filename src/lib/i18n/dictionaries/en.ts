@@ -113,6 +113,7 @@ export const en: Dictionary = {
       unknownItem: "An item in the order is no longer listed. Please refresh the app.",
       noPriceToday: "No price today for: {names}. Remove it from the order first.",
       outOfStock: "Out of stock today: {names}. Remove it from the order first.",
+      staleKey: "The order didn't go through. Please tap the button again.",
       overSukiLimit: "This order is over your suki limit. You have {available} left on your tab.",
       notFound: "This order couldn't be found.",
       alreadyCancelled: "This order is already cancelled.",

@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
 import { getDictionary } from "~/lib/i18n/dictionaries";
+import { DEFAULT_LOCALE } from "~/lib/i18n/locale";
 import { markDeliveredInput } from "~/lib/schemas/driver";
 import { orderItems, orders, productUnits, products, routes, stores } from "~/server/db/schema";
 import { notificationMessage } from "~/server/services/notificationMessage";
@@ -106,10 +107,19 @@ export const driverRouter = router({
    */
   markDelivered: driverProcedure.input(markDeliveredInput).mutation(async ({ ctx, input }) => {
     const at = now();
+    const dayStart = todayManilaStart();
+
+    // POD objects live under the order's own folder in the bucket; a path
+    // pointing anywhere else is a crafted request, not a phone upload.
+    const ownsPath = (path: string | undefined) => !path || path.startsWith(`${input.orderId}/`);
+    if (!ownsPath(input.podPhotoPath) || !ownsPath(input.podSignaturePath)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: getDictionary(ctx.locale).driver.errors.notDeliverable });
+    }
 
     return ctx.db.transaction(async (tx) => {
+      // Only an order riding today's truck can be handed over today.
       const rows = await tx.execute<{ status: string; store_id: string }>(
-        sql`SELECT status, store_id FROM orders WHERE id = ${input.orderId} FOR UPDATE`,
+        sql`SELECT status, store_id FROM orders WHERE id = ${input.orderId} AND deliver_on = ${dayStart.toISOString()} FOR UPDATE`,
       );
       const order = rows[0];
       if (!order) {
@@ -153,7 +163,7 @@ export const driverRouter = router({
           input.orderId,
           "delivered",
           orderStore.phoneE164,
-          notificationMessage(getDictionary(ctx.locale), "delivered", orderStore.name),
+          notificationMessage(getDictionary(DEFAULT_LOCALE), "delivered", orderStore.name),
         );
       }
 

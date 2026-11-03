@@ -117,6 +117,7 @@ export const tl = {
       noPriceToday: "Walang presyo ngayon para sa: {names}. Alisin muna po sa order.",
       outOfStock: "Naubos po ngayon: {names}. Alisin muna po sa order.",
       overSukiLimit: "Lampas na po sa suki limit ninyo ang order na ito. Natitira pang {available} sa tab ninyo.",
+      staleKey: "Hindi naipasa ang order. Pindutin po ulit ang button.",
       notFound: "Hindi po mahanap ang order.",
       alreadyCancelled: "Kanselado na po ang order na ito.",
       notCancellable: "Hindi na po pwedeng kanselahin — inihahanda na ang order.",

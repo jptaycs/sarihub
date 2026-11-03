@@ -19,6 +19,7 @@ const REASON_TO_CODE = {
   no_price_today: "PRECONDITION_FAILED",
   out_of_stock: "PRECONDITION_FAILED",
   over_suki_limit: "PRECONDITION_FAILED",
+  stale_key: "CONFLICT",
 } as const;
 
 const CANCEL_REASON_TO_CODE = {

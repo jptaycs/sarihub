@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, lte, gt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, gt, ne, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 import { db as defaultDb } from "~/server/db";
@@ -54,7 +54,8 @@ export type PlaceOrderResult =
         | "unknown_item"
         | "no_price_today"
         | "out_of_stock"
-        | "over_suki_limit";
+        | "over_suki_limit"
+        | "stale_key";
       message: string;
       /** For over_suki_limit: how much tab room is left, so the UI can say it. */
       availableCentavos?: bigint;
@@ -158,11 +159,17 @@ export async function placeOrder(
   const deliverOn = nextDeliveryDate(route, submittedAt);
 
   return db.transaction(async (tx) => {
+    // Two in-flight submits with the same key: the second waits here and then
+    // finds the first one's order instead of tripping the unique constraint.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${input.idempotencyKey}))`);
+
     // Retried submit with the same key returns the original order untouched.
+    // Scoped to this store: a key that somehow belongs to another store (a
+    // shared phone) must never leak that store's order back.
     const [existing] = await tx
       .select({ id: orders.id, deliverOn: orders.deliverOn, totalCentavos: orders.totalCentavos })
       .from(orders)
-      .where(eq(orders.idempotencyKey, input.idempotencyKey))
+      .where(and(eq(orders.idempotencyKey, input.idempotencyKey), eq(orders.storeId, store.id)))
       .limit(1);
     if (existing) {
       return {
@@ -175,6 +182,17 @@ export async function placeOrder(
           items: [],
         },
       };
+    }
+    // The key is taken by another store's order (two owners on one phone):
+    // refuse cleanly so the client rotates its key, instead of surfacing the
+    // unique-constraint error as a generic failure.
+    const [taken] = await tx
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.idempotencyKey, input.idempotencyKey))
+      .limit(1);
+    if (taken) {
+      return { ok: false as const, reason: "stale_key" as const, message: dict.staleKey };
     }
 
     // Serializes against markUnitOutOfStock's own advisory lock on each unit
@@ -372,12 +390,13 @@ export async function cancelOrder(
       .where(eq(orders.id, orderId));
 
     // A cancelled order should never send its already-queued "confirmed" SMS —
-    // delete it if the cron hasn't picked it up yet. Deleting (not marking
+    // delete it unless it already went out. That covers "pending" rows and
+    // "failed" rows still waiting on a retry. Deleting (not marking
     // failed/cancelled) keeps the (order_id, kind) unique constraint from
     // blocking a legitimate re-notification if this order is ever reinstated.
     await tx
       .delete(notificationQueue)
-      .where(and(eq(notificationQueue.orderId, orderId), eq(notificationQueue.status, "pending")));
+      .where(and(eq(notificationQueue.orderId, orderId), ne(notificationQueue.status, "sent")));
 
     // Reverse the tab charge. The ledger stays append-only.
     await tx.insert(sukiLedger).values({

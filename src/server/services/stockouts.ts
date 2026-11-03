@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
 import { getDictionary } from "~/lib/i18n/dictionaries";
@@ -39,6 +39,9 @@ export async function markUnitOutOfStock(
   locale: Locale = DEFAULT_LOCALE,
 ): Promise<MarkOutOfStockResult> {
   const dict = getDictionary(locale).buyerPrices.errors;
+  // Ledger reasons and the owner-facing cancel reason are stored for the
+  // store, so they render in the app's default language, not the buyer's.
+  const storeDict = getDictionary(DEFAULT_LOCALE).buyerPrices.errors;
   const at = now();
   const dayStr = formatManila(at, "yyyy-MM-dd");
   // The orders affected are the ones riding today's truck.
@@ -126,7 +129,7 @@ export async function markUnitOutOfStock(
         kind: "adjustment",
         amountCentavos: -deltaCentavos,
         orderId,
-        reason: interpolate(dict.oosLedgerReason, { name: unit.nameTl, unit: unit.labelTl }),
+        reason: interpolate(storeDict.oosLedgerReason, { name: unit.nameTl, unit: unit.labelTl }),
       });
     }
 
@@ -148,7 +151,7 @@ export async function markUnitOutOfStock(
         .set({
           status: "cancelled",
           cancelledAt: at,
-          cancelledReason: dict.autoCancelledReasonText,
+          cancelledReason: storeDict.autoCancelledReasonText,
         })
         .where(inArray(orders.id, emptiedOrderIds));
 
@@ -159,7 +162,7 @@ export async function markUnitOutOfStock(
         .where(
           and(
             inArray(notificationQueue.orderId, emptiedOrderIds),
-            eq(notificationQueue.status, "pending"),
+            ne(notificationQueue.status, "sent"),
           ),
         );
     }

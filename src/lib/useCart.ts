@@ -65,5 +65,11 @@ export function useCart(storageKey: string = OWNER_CART_KEY) {
 
   const clear = useCallback(() => setCart(freshCart()), []);
 
-  return { cart, setQuantity, clear };
+  /** New key, same lines — after the server refused the old key as taken. */
+  const rotateKey = useCallback(
+    () => setCart((prev) => ({ ...prev, idempotencyKey: crypto.randomUUID() })),
+    [],
+  );
+
+  return { cart, setQuantity, clear, rotateKey };
 }
