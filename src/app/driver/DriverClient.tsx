@@ -14,6 +14,7 @@ import { googleMapsDirectionsUrl } from "~/lib/geo";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { uploadPod } from "~/lib/supabase/storage";
+import { markStopDelivered } from "~/lib/optimistic";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -169,17 +170,40 @@ function StopList(props: { routeId: string; routes: RoutesToday["routes"] }) {
 
       <div className="mt-1 space-y-3">
         {stops.map((stop, i) => (
-          <StopCard key={stop.id} stop={stop} index={i + 1} isNext={stop.id === nextStopId} />
+          <StopCard key={stop.id} stop={stop} routeId={props.routeId} index={i + 1} isNext={stop.id === nextStopId} />
         ))}
       </div>
     </div>
   );
 }
 
-function StopCard(props: { stop: Stop; index: number; isNext: boolean }) {
+function StopCard(props: { stop: Stop; routeId: string; index: number; isNext: boolean }) {
   const { stop, index, isNext } = props;
   const dict = useDictionary();
+  const utils = trpc.useUtils();
   const [confirming, setConfirming] = useState(false);
+  /** POD paths that already made it up, so a retry after a failed mutation skips the uploads. */
+  const [uploaded, setUploaded] = useState<{ photo?: string; signature?: string }>({});
+  // Optimistic: the stop ticks off as soon as the driver taps "Tapos" — on a
+  // bumpy 4G road the answer can take seconds — and un-ticks with the error
+  // under the button if the server refuses. The list refetches either way.
+  const markDelivered = trpc.driver.markDelivered.useMutation({
+    async onMutate(input) {
+      const key = { routeId: props.routeId };
+      await utils.driver.stops.cancel(key);
+      const previous = utils.driver.stops.getData(key);
+      utils.driver.stops.setData(key, (old) => (old ? [...markStopDelivered(old, input.orderId)] : old));
+      setConfirming(false);
+      return { previous };
+    },
+    onError(_error, _input, context) {
+      if (context?.previous) utils.driver.stops.setData({ routeId: props.routeId }, context.previous);
+    },
+    onSettled() {
+      void utils.driver.stops.invalidate();
+      void utils.driver.routesToday.invalidate();
+    },
+  });
   const done = isDone(stop);
   const activeItems = stop.items.filter((i) => !i.cancelledItem);
 
@@ -267,28 +291,38 @@ function StopCard(props: { stop: Stop; index: number; isNext: boolean }) {
         </Button>
       )}
 
-      {confirming && <PodSheet stop={stop} onClose={() => setConfirming(false)} />}
+      {!done && markDelivered.error && (
+        <p className="text-danger mt-3 text-[14px] font-medium">{markDelivered.error.message}</p>
+      )}
+
+      {confirming && (
+        <PodSheet
+          stop={stop}
+          uploaded={uploaded}
+          onUploaded={setUploaded}
+          pending={markDelivered.isPending}
+          onSubmit={(paths) => markDelivered.mutate({ orderId: stop.id, ...paths })}
+          onClose={() => setConfirming(false)}
+        />
+      )}
     </Card>
   );
 }
 
-function PodSheet(props: { stop: Stop; onClose: () => void }) {
-  const { stop } = props;
+function PodSheet(props: {
+  stop: Stop;
+  uploaded: { photo?: string; signature?: string };
+  onUploaded: (paths: { photo?: string; signature?: string }) => void;
+  pending: boolean;
+  onSubmit: (paths: { podPhotoPath?: string; podSignaturePath?: string }) => void;
+  onClose: () => void;
+}) {
+  const { stop, uploaded } = props;
   const dict = useDictionary();
-  const utils = trpc.useUtils();
-  const markDelivered = trpc.driver.markDelivered.useMutation({
-    onSuccess() {
-      void utils.driver.stops.invalidate();
-      void utils.driver.routesToday.invalidate();
-      props.onClose();
-    },
-  });
 
   const [photo, setPhoto] = useState<File | null>(null);
   const [hasSignature, setHasSignature] = useState(false);
   const [uploading, setUploading] = useState(false);
-  /** Paths that already made it up, so a retry after a failed mutation skips the uploads. */
-  const [uploaded, setUploaded] = useState<{ photo?: string; signature?: string }>({});
   const signatureBox = useRef<HTMLDivElement | null>(null);
 
   // Thumbnail so the driver can see the photo actually took.
@@ -299,7 +333,7 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
     };
   }, [photoUrl]);
 
-  const busy = uploading || markDelivered.isPending;
+  const busy = uploading || props.pending;
 
   const submit = async () => {
     setUploading(true);
@@ -322,9 +356,9 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
             )
           : Promise.resolve(undefined),
     ]);
-    setUploaded({ photo: podPhotoPath, signature: podSignaturePath });
+    props.onUploaded({ photo: podPhotoPath, signature: podSignaturePath });
     setUploading(false);
-    markDelivered.mutate({ orderId: stop.id, podPhotoPath, podSignaturePath });
+    props.onSubmit({ podPhotoPath, podSignaturePath });
   };
 
   return (
@@ -380,9 +414,6 @@ function PodSheet(props: { stop: Stop; onClose: () => void }) {
           <SignaturePad onChange={setHasSignature} />
         </div>
 
-        {markDelivered.error && (
-          <p className="text-danger mt-3 text-[14px] font-medium">{markDelivered.error.message}</p>
-        )}
 
         <Button size="lg" block className="mt-5 h-16 text-[19px]" disabled={busy} onClick={submit}>
           {busy ? dict.driver.submitting : dict.driver.doneButton}

@@ -11,6 +11,7 @@ import { formatPeso } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
+import { advanceOrderStatus } from "~/lib/optimistic";
 import { trpc } from "~/lib/trpc/client";
 import type { AppRouter } from "~/server/trpc/root";
 
@@ -54,6 +55,8 @@ export function OrdersBoardClient() {
   });
   const [routeFilter, setRouteFilter] = useState<string | null>(null);
   const [activeStatus, setActiveStatus] = useState<ColumnStatus>("submitted");
+  // Last refused move, shown above the board (the card itself remounts in another column).
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   if (boardQuery.isLoading) return <LoadingState />;
   if (boardQuery.error || !boardQuery.data) return <ErrorState />;
@@ -136,6 +139,12 @@ export function OrdersBoardClient() {
         </section>
       )}
 
+      {moveError && (
+        <p role="alert" className="mt-4 rounded-sm bg-danger-soft px-3 py-2 text-[13px] font-medium text-danger">
+          {moveError}
+        </p>
+      )}
+
       {/* Phone: one column at a time via a status tab strip. */}
       <div
         role="tablist"
@@ -197,7 +206,7 @@ export function OrdersBoardClient() {
                   </p>
                 )}
                 {colOrders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
+                  <OrderCard key={order.id} order={order} onError={setMoveError} />
                 ))}
               </div>
             </section>
@@ -234,14 +243,29 @@ function RoutePill(props: { label: string; active: boolean; onClick: () => void 
   );
 }
 
-function OrderCard(props: { order: BoardOrder }) {
+function OrderCard(props: { order: BoardOrder; onError: (message: string) => void }) {
   const { order } = props;
   const dict = useDictionary();
   const utils = trpc.useUtils();
   const [confirming, setConfirming] = useState(false);
+  // Optimistic: the card jumps to the next column the moment the admin
+  // confirms, and jumps back if the server refuses (forward-only guard,
+  // lost connection). The board refetches either way so the server's answer
+  // wins. The card remounts in the other column, so the error surfaces on
+  // the board, not here.
   const setStatus = trpc.admin.orders.setStatus.useMutation({
-    onSuccess() {
+    async onMutate(input) {
+      await utils.admin.orders.board.cancel();
+      const previous = utils.admin.orders.board.getData();
+      utils.admin.orders.board.setData(undefined, (old) =>
+        old ? { ...old, orders: [...advanceOrderStatus(old.orders, input.orderId, input.status)] } : old,
+      );
       setConfirming(false);
+      return { previous };
+    },
+    onError(error, _input, context) {
+      if (context?.previous) utils.admin.orders.board.setData(undefined, context.previous);
+      props.onError(error.message);
     },
     onSettled() {
       void utils.admin.orders.board.invalidate();
@@ -301,9 +325,6 @@ function OrderCard(props: { order: BoardOrder }) {
             </Button>
           </div>
         </div>
-      )}
-      {setStatus.error && (
-        <p className="mt-2 text-[13px] font-medium text-danger">{setStatus.error.message}</p>
       )}
     </Card>
   );
