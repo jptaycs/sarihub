@@ -3,6 +3,7 @@ import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { formatManila, fromManila, now } from "~/lib/datetime";
+import { nextTruckDay } from "~/lib/deliverySchedule";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
@@ -13,20 +14,33 @@ import {
   orders,
   productUnits,
   products,
+  routes,
   sukiLedger,
   unitStockouts,
 } from "~/server/db/schema";
 
 type Db = typeof defaultDb;
 
+/**
+ * The Manila day ("yyyy-MM-dd") a stockout marked at `at` applies to: the day
+ * the next truck rides, by the same cutoff rule orders use. A unit marked
+ * "ubos" at 9 PM cancels it on tomorrow's orders, not today's delivered ones.
+ */
+export async function stockoutDay(db: Db, at: Date): Promise<string> {
+  const schedules = await db
+    .select({ cutoffLocal: routes.cutoffLocal, activeWeekdays: routes.activeWeekdays })
+    .from(routes);
+  return formatManila(nextTruckDay(schedules, at), "yyyy-MM-dd");
+}
+
 export type MarkOutOfStockResult =
   | { ok: true; alreadyMarked: boolean; affectedOrders: number }
   | { ok: false; reason: "unknown_unit"; message: string };
 
 /**
- * Buyer marks a unit as unsourceable for today's Manila delivery day.
+ * Buyer marks a unit as unsourceable for the next truck's delivery day (`stockoutDay`).
  *
- * Cascade, all in one transaction: today's submitted orders that carry the
+ * Cascade, all in one transaction: that day's submitted orders that carry the
  * unit get the line flagged `cancelled_item`, their totals recomputed from the
  * surviving locked lines, and the difference handed back on the suki tab as an
  * adjustment ledger row. Nothing is deleted and locked prices never change —
@@ -43,8 +57,8 @@ export async function markUnitOutOfStock(
   // store, so they render in the app's default language, not the buyer's.
   const storeDict = getDictionary(DEFAULT_LOCALE).buyerPrices.errors;
   const at = now();
-  const dayStr = formatManila(at, "yyyy-MM-dd");
-  // The orders affected are the ones riding today's truck.
+  const dayStr = await stockoutDay(db, at);
+  // The orders affected are the ones riding that truck.
   const dayStart = fromManila(new Date(`${dayStr}T00:00:00`));
 
   const [unit] = await db
@@ -71,7 +85,7 @@ export async function markUnitOutOfStock(
       .onConflictDoNothing()
       .returning({ id: unitStockouts.id });
     if (inserted.length === 0) {
-      // Already marked today; the cascade already ran. Don't run it twice.
+      // Already marked for that day; the cascade already ran. Don't run it twice.
       return { ok: true as const, alreadyMarked: true, affectedOrders: 0 };
     }
 

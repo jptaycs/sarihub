@@ -77,7 +77,7 @@ roles `authenticated`/`anon`/`service_role`), then `DATABASE_URL=<local> pnpm db
 every `drizzle/*_rls.sql` plus `drizzle/0008_stores_owner_update_rls_fix.sql` (hand-written, not
 journaled) and `drizzle/seed.sql` with `psql`, and run `TEST_DATABASE_URL=<local> pnpm test`
 (or just the DB-backed files with `pnpm test:integration`). Vitest aliases `server-only` to `src/test/serverOnlyStub.ts`
-so services import cleanly.
+so services import cleanly. Seed prices expire after 24 hours like real ones, so a day later the POS and order tests fail with "no price" — re-run `drizzle/seed.sql` (safe to repeat; it appends fresh price rows) and they pass again.
 
 **Playwright suite (live project).** `pnpm test:e2e` boots `next dev` and runs against the **live**
 Supabase project in `.env` — there is no e2e database. Hard-won rules: every dev-login is a real
@@ -97,6 +97,8 @@ Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datet
 ## Roadmap / to-do
 
 Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check items off as they land.
+
+**Owner's decision (2026-11-04): no third-party API that needs a card or a subscription.** Twilio (real-number sign-in), Mapbox (driver map / pin picker), Semaphore (order SMS) and PayMongo stay dormant behind their env keys; the code paths are built and fail closed. Don't spend time on them unless the owner reverses this. Sign-in stays on the two Supabase test-OTP numbers, so onboarding a real store owner or helper means adding their number under Auth → Phone → test OTP in the Supabase dashboard.
 
 ### Done
 - [x] Scaffold: Next.js 15 + tRPC + Drizzle + Supabase, phone-OTP auth flow (login → verify → home)
@@ -154,7 +156,7 @@ Spec: `docs/superpowers/specs/2026-11-03-truck-crew-pos-design.md`. Plan: `docs/
 - [x] RLS: new tables staff-SELECT via `is_active_staff()`, UPDATE/DELETE revoked (append-only); **the same file enables RLS on `notification_queue`, which 0005 had left readable through PostgREST with the anon key**
 - [x] Verified: migration 0009 + all RLS files + seed apply cleanly to a local Postgres; service integration tests (`posSales`, `truckStock`, `orders.advanceOrderStatus`) pass against it; `next build` compiles every route
 - [x] Applied to the live Supabase project 2026-11-04: `pnpm db:migrate` (0009 + 0010), `drizzle/0009_truck_crew_pos_rls.sql` and `drizzle/0010_hot_path_indexes_rls.sql` via psql (verified: RLS on the three new tables + `notification_queue`, `recompute_suki_balance` carries the row lock). `tests/e2e/crew-pos.spec.ts` passes live. The host had not resolved earlier only because the free-tier project was **paused** for inactivity (`supabase projects list` shows `INACTIVE`); restore it from the dashboard, then wait for `ACTIVE_HEALTHY`.
-- [ ] Creating a real `helper` account still needs the Twilio item above (only the two test-OTP numbers can sign in)
+- [ ] Creating a real `helper` account: Twilio is parked (see the decision at the top of the roadmap), so add the helper's number as a Supabase test-OTP number, have them sign in once, then register them on `/admin/staff`
 - [x] `crew-pos.spec.ts` cleans up after itself (2026-11-04): POS sales have no reversal path by design, so the spec ends the way an admin would — a negative suki adjustment on `/admin/suki` for the charge (asserts the owner's balance is back at baseline) and an `add` movement on `/crew/stock` for the kilo. The `pos_sales` row and the `sale` movement stay as history, so today's sales count and the Benta column still grow by one per run.
 - `inventory_snapshots` / `inventory_snapshot_items` (migration 0000) are unused and superseded by `truck_stock_movements`; left in place because dropping is a destructive migration
 
@@ -170,7 +172,8 @@ Two read-only audits (correctness + performance) ran over the whole app before t
 - [x] Driver POD uploads run in parallel under stable paths and a failed mutation retries without re-uploading; order detail retries transient errors instead of showing "not found"; focus/reconnect refetch re-enabled; pinch-zoom allowed; sub-44px controls raised
 - [x] Service worker caches only the landing shells (never order detail, ledger or admin pages), bumps its cache version, and clears all caches on sign-out (shared phones)
 - [x] Zod messages in `src/lib/schemas/*` are dictionary keys (`validation.*`), translated on both the form side and the tRPC side (2026-11-04) — see the i18n paragraph under Project Structure for the pattern
-- [ ] Deferred, not done: `buyer.markOutOfStock` targets today's Manila date even at 9 PM when owners are ordering for tomorrow (product call: which day the buyer means); optimistic updates on the kanban/driver buttons; persisted React Query cache for an offline price list (needs a new dependency); the CSV import still does ~8 statements per row
+- [x] `buyer.markOutOfStock` follows the order cutoff (owner's call, 2026-11-05): `stockoutDay` = the day the next truck rides (`nextTruckDay` in `~/lib/deliverySchedule`, earliest across routes) — before the cutoff that's today, at 9 PM it's tomorrow, the day owners are ordering for. The price board returns `stockoutDay`, and the badge/confirm name the date when it isn't today
+- [ ] Deferred, not done: optimistic updates on the kanban/driver buttons; persisted React Query cache for an offline price list (needs a new dependency); the CSV import still does ~8 statements per row
 
 ### Deferred from the bilingual UI work (low priority, not blocking anything)
 - [x] A language switcher reachable after login — shipped as part of the

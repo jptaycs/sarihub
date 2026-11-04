@@ -9,7 +9,7 @@ import { getDictionary } from "~/lib/i18n/dictionaries";
 import { bulkAdjustPricesInput, markOutOfStockInput, setPriceInput } from "~/lib/schemas/price";
 import { dailyPrices, productUnits, products, type ProductCategory } from "~/server/db/schema";
 import { adjustCentavos } from "~/server/services/pricing";
-import { markUnitOutOfStock, stockoutsForDay } from "~/server/services/stockouts";
+import { markUnitOutOfStock, stockoutDay, stockoutsForDay } from "~/server/services/stockouts";
 import { buyerProcedure, router, staffProcedure } from "~/server/trpc/init";
 
 /** New price rows are good for 24 hours, same convention as the seed. */
@@ -25,11 +25,13 @@ export const buyerRouter = router({
   /**
    * The 5 AM price board: every active unit with today's live price, the last
    * known price before it (what "carry over" would write), and whether the
-   * unit is already marked out of stock for today.
+   * unit is already marked out of stock for the next truck (`stockoutDay`:
+   * today's before the route cutoff, otherwise the next delivery day).
    */
   priceBoard: buyerProcedure.query(async ({ ctx }) => {
     const at = now();
     const todayStr = formatManila(at, "yyyy-MM-dd");
+    const stockoutDayStr = await stockoutDay(ctx.db, at);
 
     const rows = await ctx.db
       .select({
@@ -79,14 +81,14 @@ export const buyerRouter = router({
       }
     }
 
-    const stockouts = await stockoutsForDay(ctx.db, todayStr);
+    const stockouts = await stockoutsForDay(ctx.db, stockoutDayStr);
 
     type UnitOut = {
       id: string;
       labelTl: string;
       todayCentavos: bigint | null;
       previousCentavos: bigint | null;
-      outOfStockToday: boolean;
+      outOfStock: boolean;
     };
     type ProductOut = {
       id: string;
@@ -110,11 +112,11 @@ export const buyerRouter = router({
         labelTl: r.unitLabelTl,
         todayCentavos: todayByUnit.get(r.unitId) ?? null,
         previousCentavos: previousByUnit.get(r.unitId) ?? null,
-        outOfStockToday: stockouts.has(r.unitId),
+        outOfStock: stockouts.has(r.unitId),
       });
     }
 
-    return { asOf: at, day: todayStr, products: productsOut };
+    return { asOf: at, day: todayStr, stockoutDay: stockoutDayStr, products: productsOut };
   }),
 
   /** Write today's price for one unit. Always INSERT — the ledger of prices is append-only. */

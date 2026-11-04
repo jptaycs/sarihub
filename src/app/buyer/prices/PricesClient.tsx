@@ -8,7 +8,7 @@ import { Button } from "~/components/ui/Button";
 import { Card, CardRow } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
-import { formatManila, now } from "~/lib/datetime";
+import { formatManila, fromManila, now } from "~/lib/datetime";
 import { formatPeso, pesosToCentavos } from "~/lib/format";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
@@ -41,7 +41,13 @@ export function PricesClient() {
 
   const board = boardQuery.data;
   const allUnits = board.products.flatMap((p) => p.units);
-  const unpriced = allUnits.filter((u) => u.todayCentavos === null && !u.outOfStockToday);
+  // After the route cutoff a stockout applies to the next truck, not today's
+  // (already-delivered) orders — name that day on the badge and the confirm.
+  const stockoutDateLabel =
+    board.stockoutDay === board.day
+      ? null
+      : formatManila(fromManila(new Date(`${board.stockoutDay}T00:00:00`)), "EEEE, d MMM", locale);
+  const unpriced = allUnits.filter((u) => u.todayCentavos === null && !u.outOfStock);
   const carryable = unpriced.filter((u) => u.previousCentavos !== null);
   const pricedCount = allUnits.filter((u) => u.todayCentavos !== null).length;
   // "Done" = priced or marked out of stock — nothing left for the buyer to do.
@@ -113,7 +119,7 @@ export function PricesClient() {
 
       <div className="mt-2">
         {board.products.map((product) => (
-          <ProductPriceGroup key={product.id} product={product} />
+          <ProductPriceGroup key={product.id} product={product} stockoutDateLabel={stockoutDateLabel} />
         ))}
       </div>
     </div>
@@ -293,8 +299,8 @@ function BulkAdjustPanel(props: { pricedCount: number; onDone: () => void }) {
   );
 }
 
-function ProductPriceGroup(props: { product: BoardProduct }) {
-  const { product } = props;
+function ProductPriceGroup(props: { product: BoardProduct; stockoutDateLabel: string | null }) {
+  const { product, stockoutDateLabel } = props;
   return (
     <section className="pt-6">
       <div className="flex items-baseline gap-2 px-1">
@@ -303,15 +309,15 @@ function ProductPriceGroup(props: { product: BoardProduct }) {
       </div>
       <Card className="mt-2">
         {product.units.map((unit) => (
-          <UnitPriceRow key={unit.id} nameTl={product.nameTl} unit={unit} />
+          <UnitPriceRow key={unit.id} nameTl={product.nameTl} unit={unit} stockoutDateLabel={stockoutDateLabel} />
         ))}
       </Card>
     </section>
   );
 }
 
-function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
-  const { nameTl, unit } = props;
+function UnitPriceRow(props: { nameTl: string; unit: BoardUnit; stockoutDateLabel: string | null }) {
+  const { nameTl, unit, stockoutDateLabel } = props;
   const dict = useDictionary();
   const utils = trpc.useUtils();
 
@@ -344,13 +350,15 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
   const draftCentavos = pesosToCentavos(draft);
   const canSave = !setPrice.isPending && draftCentavos !== null && draftCentavos !== 0;
 
-  if (unit.outOfStockToday) {
+  if (unit.outOfStock) {
     return (
       <CardRow className="flex min-h-16 items-center justify-between gap-3">
         <span className="text-[17px] text-ink-3 line-through">{unit.labelTl}</span>
         <span className="inline-flex items-center gap-1.5 rounded-pill bg-danger-soft px-3 py-1.5 text-[13px] font-semibold text-danger">
           <PackageX size={15} strokeWidth={2} />
-          {dict.buyerPrices.outOfStockBadge}
+          {stockoutDateLabel
+            ? interpolate(dict.buyerPrices.outOfStockBadgeOn, { date: stockoutDateLabel })
+            : dict.buyerPrices.outOfStockBadge}
         </span>
       </CardRow>
     );
@@ -422,7 +430,9 @@ function UnitPriceRow(props: { nameTl: string; unit: BoardUnit }) {
     return (
       <CardRow className="animate-fade-in bg-danger-soft py-4">
         <p className="text-[16px] font-medium leading-snug">
-          {interpolate(dict.buyerPrices.confirmOos, { name: nameTl, unit: unit.labelTl })}
+          {stockoutDateLabel
+            ? interpolate(dict.buyerPrices.confirmOosOn, { name: nameTl, unit: unit.labelTl, date: stockoutDateLabel })
+            : interpolate(dict.buyerPrices.confirmOos, { name: nameTl, unit: unit.labelTl })}
         </p>
         <div className="mt-3 flex gap-2">
           <Button

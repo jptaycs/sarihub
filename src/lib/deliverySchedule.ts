@@ -50,3 +50,21 @@ export function nextDeliveryDate(schedule: DeliverySchedule, nowUtc: Date): Date
   }
   throw new Error("Route has no active weekdays.");
 }
+
+/**
+ * The Manila day the *next* truck rides, across every route: the earliest
+ * `nextDeliveryDate`. This is the day a buyer's stockout applies to — at 5 AM
+ * in the palengke the cutoff has passed, so the next truck is tomorrow's —
+ * the one owners are ordering for tonight. Before the cutoff it's today's.
+ *
+ * With no routes (a data bug) it degrades to today's Manila date so the price
+ * board stays usable.
+ */
+export function nextTruckDay(schedules: DeliverySchedule[], nowUtc: Date): Date {
+  let earliest: Date | null = null;
+  for (const schedule of schedules) {
+    const day = nextDeliveryDate(schedule, nowUtc);
+    if (earliest === null || day < earliest) earliest = day;
+  }
+  return earliest ?? fromZonedTime(startOfDay(toZonedTime(nowUtc, MANILA_TZ)), MANILA_TZ);
+}

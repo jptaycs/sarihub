@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatManila } from "./datetime";
-import { cutoffInstant, nextDeliveryDate } from "./deliverySchedule";
+import { cutoffInstant, nextDeliveryDate, nextTruckDay } from "./deliverySchedule";
 
 const EVERY_DAY = 127;
 const WEEKDAYS_ONLY = 2 + 4 + 8 + 16 + 32; // Mon–Fri
@@ -69,5 +69,36 @@ describe("cutoffInstant", () => {
     const deliverOn = manila("2026-07-07T00:00:00");
     const out = cutoffInstant("04:30", deliverOn);
     expect(formatManila(out, "HH:mm")).toBe("04:30");
+  });
+});
+
+describe("nextTruckDay", () => {
+  it("is the earliest delivery day across routes", () => {
+    const at = manila("2026-07-06T21:00:00"); // Mon 9 PM
+    const out = nextTruckDay(
+      [
+        { cutoffLocal: "04:30:00", activeWeekdays: WEEKDAYS_ONLY },
+        { cutoffLocal: "04:30:00", activeWeekdays: EVERY_DAY },
+      ],
+      at,
+    );
+    expect(deliveredOn(out)).toBe("2026-07-07");
+  });
+
+  it("at 5 AM in the palengke, after the cutoff, the next truck is tomorrow's", () => {
+    const at = manila("2026-07-06T05:00:00");
+    const out = nextTruckDay([{ cutoffLocal: "04:30:00", activeWeekdays: EVERY_DAY }], at);
+    expect(deliveredOn(out)).toBe("2026-07-07");
+  });
+
+  it("before the cutoff it is still today's truck", () => {
+    const at = manila("2026-07-06T04:00:00");
+    const out = nextTruckDay([{ cutoffLocal: "04:30:00", activeWeekdays: EVERY_DAY }], at);
+    expect(deliveredOn(out)).toBe("2026-07-06");
+  });
+
+  it("falls back to today's Manila date when there are no routes", () => {
+    const at = manila("2026-07-06T21:00:00");
+    expect(deliveredOn(nextTruckDay([], at))).toBe("2026-07-06");
   });
 });
