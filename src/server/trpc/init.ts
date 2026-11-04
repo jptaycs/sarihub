@@ -10,6 +10,9 @@ import { staff } from "~/server/db/schema";
 import { createSupabaseServer } from "~/lib/supabase/server";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
+import { DEFAULT_LOCALE } from "~/lib/i18n/locale";
+
+import { zodErrorMessage } from "./zodMessage";
 
 export async function createTRPCContext() {
   const supabase = await createSupabaseServer();
@@ -24,12 +27,16 @@ export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
-  errorFormatter({ shape, error }) {
+  errorFormatter({ shape, error, ctx }) {
+    const zodError = error.cause instanceof ZodError ? error.cause : null;
     return {
       ...shape,
+      // A zod failure's default `message` is the JSON issue list; clients
+      // render `error.message` directly, so hand them translated copy.
+      message: zodError ? zodErrorMessage(ctx?.locale ?? DEFAULT_LOCALE, zodError) : shape.message,
       data: {
         ...shape.data,
-        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+        zodError: zodError ? zodError.flatten() : null,
       },
     };
   },

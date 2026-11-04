@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { validationMessage } from "~/lib/i18n/validation";
+
 /**
  * Buyer price entry — backs the price-board form and `buyer.setPrice`.
  * Centavos, not pesos: the UI converts with `pesosToCentavos` before submit.
@@ -10,8 +12,8 @@ export const setPriceInput = z.object({
   priceCentavos: z
     .number()
     .int()
-    .min(1, "Lagyan po ng presyo.")
-    .max(10_000_000, "Masyadong malaki ang presyo — pakisuri po."),
+    .min(1, validationMessage("priceRequired"))
+    .max(10_000_000, validationMessage("priceTooLarge")),
 });
 
 export type SetPriceInput = z.infer<typeof setPriceInput>;
@@ -40,14 +42,14 @@ export const bulkAdjustPricesInput = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["value"],
-          message: "Sa pagitan ng 0 at 100 lang po ang porsyento.",
+          message: validationMessage("percentRange"),
         });
       }
     } else if (!(Number.isInteger(val.value) && val.value > 0 && val.value <= 10_000_000)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["value"],
-        message: "Lagyan po ng tamang halaga.",
+        message: validationMessage("amountInvalid"),
       });
     }
   });

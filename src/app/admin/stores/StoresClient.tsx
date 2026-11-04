@@ -16,6 +16,7 @@ import { formatPeso, formatPhone, pesosToCentavos } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { fieldError } from "~/lib/i18n/validation";
 import {
   createStoreInput,
   updateStoreInput,
@@ -236,16 +237,16 @@ function CreateStoreForm(props: {
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => create.mutate(values))}
     >
-      <Field label={dict.admin.stores.storeName} error={form.formState.errors.name?.message}>
+      <Field label={dict.admin.stores.storeName} error={fieldError(dict, form.formState.errors.name?.message)}>
         <Input {...form.register("name")} placeholder="Tindahan ni Marisa" />
       </Field>
-      <Field label={dict.admin.stores.ownerName} error={form.formState.errors.ownerName?.message}>
+      <Field label={dict.admin.stores.ownerName} error={fieldError(dict, form.formState.errors.ownerName?.message)}>
         <Input {...form.register("ownerName")} placeholder="Aling Marisa" />
       </Field>
-      <Field label={dict.admin.stores.ownerMobile} error={form.formState.errors.phone?.message}>
+      <Field label={dict.admin.stores.ownerMobile} error={fieldError(dict, form.formState.errors.phone?.message)}>
         <Input {...form.register("phone")} inputMode="tel" placeholder="0917 123 4567" />
       </Field>
-      <Field label={dict.admin.stores.address} error={form.formState.errors.addressLine?.message}>
+      <Field label={dict.admin.stores.address} error={fieldError(dict, form.formState.errors.addressLine?.message)}>
         <Input {...form.register("addressLine")} placeholder="Brgy. Ibabang Dupay, Lucena" />
       </Field>
       <Field label={dict.admin.stores.route}>
@@ -257,7 +258,7 @@ function CreateStoreForm(props: {
           })}
         />
       </Field>
-      <Field label={dict.admin.stores.stopOrder} error={form.formState.errors.stopOrder?.message}>
+      <Field label={dict.admin.stores.stopOrder} error={fieldError(dict, form.formState.errors.stopOrder?.message)}>
         <Input
           type="number"
           inputMode="numeric"
@@ -275,7 +276,7 @@ function CreateStoreForm(props: {
           const centavos = pesosToCentavos(v);
           form.setValue("sukiLimitCentavos", centavos ?? -1, { shouldValidate: true });
         }}
-        error={form.formState.errors.sukiLimitCentavos ? dict.admin.stores.invalidAmount : undefined}
+        error={fieldError(dict, form.formState.errors.sukiLimitCentavos?.message)}
       />
       <div className="sm:col-span-2">
         <span className="mb-1.5 block px-1 text-[13px] font-medium text-ink-2">
@@ -347,13 +348,13 @@ function UpdateStoreForm(props: {
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => update.mutate(values))}
     >
-      <Field label={dict.admin.stores.storeName} error={form.formState.errors.name?.message}>
+      <Field label={dict.admin.stores.storeName} error={fieldError(dict, form.formState.errors.name?.message)}>
         <Input {...form.register("name")} />
       </Field>
-      <Field label={dict.admin.stores.ownerName} error={form.formState.errors.ownerName?.message}>
+      <Field label={dict.admin.stores.ownerName} error={fieldError(dict, form.formState.errors.ownerName?.message)}>
         <Input {...form.register("ownerName")} />
       </Field>
-      <Field label={dict.admin.stores.address} error={form.formState.errors.addressLine?.message}>
+      <Field label={dict.admin.stores.address} error={fieldError(dict, form.formState.errors.addressLine?.message)}>
         <Input {...form.register("addressLine")} />
       </Field>
       <Field label={dict.admin.stores.route}>
@@ -366,7 +367,7 @@ function UpdateStoreForm(props: {
           })}
         />
       </Field>
-      <Field label={dict.admin.stores.stopOrder} error={form.formState.errors.stopOrder?.message}>
+      <Field label={dict.admin.stores.stopOrder} error={fieldError(dict, form.formState.errors.stopOrder?.message)}>
         <Input
           type="number"
           inputMode="numeric"
@@ -384,7 +385,7 @@ function UpdateStoreForm(props: {
           const centavos = pesosToCentavos(v);
           form.setValue("sukiLimitCentavos", centavos ?? -1, { shouldValidate: true });
         }}
-        error={form.formState.errors.sukiLimitCentavos ? dict.admin.stores.invalidAmount : undefined}
+        error={fieldError(dict, form.formState.errors.sukiLimitCentavos?.message)}
       />
       <div className="sm:col-span-2">
         <span className="mb-1.5 block px-1 text-[13px] font-medium text-ink-2">

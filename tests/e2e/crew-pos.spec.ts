@@ -84,6 +84,41 @@ test("crew POS: suki sale charges the owner's tab and reduces truck stock", asyn
     expect(sold).toBeGreaterThanOrEqual(1);
   });
 
+  // POS sales are append-only with no reversal path by design, so the spec
+  // undoes its own side effects the way an admin would: a signed suki
+  // adjustment for the charge, and an `add` movement for the kilo. The
+  // `pos_sales` row and the `sale` movement stay as history.
+  await test.step("cleanup: admin reverses the charge on the owner's tab", async () => {
+    await staffPage.goto("/admin/suki");
+    await staffPage.getByRole("button", { name: /Tindahan ni Suki/ }).first().click();
+    // The adjustment sign defaults to "decrease" (Bawas sa utang).
+    await expect(staffPage.getByRole("button", { name: "Bawas sa utang" })).toBeVisible();
+    await staffPage.getByLabel("Halaga ng adjustment").fill(unitPrice.toFixed(2));
+    await staffPage.getByPlaceholder(/^Dahilan/).fill("e2e cleanup: ibinalik ang test sale");
+    await staffPage.getByRole("button", { name: "Itala ang adjustment" }).click();
+    await expect(staffPage.getByText("e2e cleanup: ibinalik ang test sale").first()).toBeVisible();
+
+    await ownerPage.goto("/home");
+    await expect
+      .poll(async () => readSukiBalance(ownerPage), { timeout: 10_000 })
+      .toBeCloseTo(baselineBalance, 2);
+  });
+
+  await test.step("cleanup: the kilo goes back on the truck", async () => {
+    await staffPage.goto("/crew/stock");
+    const row = staffPage
+      .getByRole("listitem")
+      .filter({ has: staffPage.getByRole("button", { name: "Dagdagan ang Sibuyas 1 kilo" }) });
+    const onHandBefore = Number(await row.locator(".tnum > span").nth(4).textContent());
+    await row.getByRole("button", { name: "Dagdagan ang Sibuyas 1 kilo" }).click();
+    const sheet = staffPage.getByRole("dialog", { name: "Dagdag na karga" });
+    await sheet.getByRole("button", { name: "Idagdag" }).click();
+    await expect(sheet).toBeHidden();
+    await expect
+      .poll(async () => Number(await row.locator(".tnum > span").nth(4).textContent()), { timeout: 10_000 })
+      .toBe(onHandBefore + 1);
+  });
+
   await ownerContext.close();
   await staffContext.close();
 });

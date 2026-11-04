@@ -14,6 +14,7 @@ import { formatPhone } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { fieldError } from "~/lib/i18n/validation";
 import {
   createStaffInput,
   updateStaffInput,
@@ -194,7 +195,7 @@ function CreateStaffForm(props: { onDone: () => void }) {
 
   return (
     <form onSubmit={form.handleSubmit((values) => create.mutate(values))} className="grid gap-4 sm:grid-cols-2">
-      <Field label={dict.admin.staff.name} className="sm:col-span-2" error={form.formState.errors.name && dict.admin.stores.invalidAmount}>
+      <Field label={dict.admin.staff.name} className="sm:col-span-2" error={fieldError(dict, form.formState.errors.name?.message)}>
         <Input {...form.register("name")} autoComplete="off" />
       </Field>
       <Field label={dict.admin.staff.mobile} error={form.formState.errors.phone && dict.admin.errors.invalidPhone}>
@@ -239,7 +240,7 @@ function EditStaffForm(props: { row: StaffRow; onDone: () => void }) {
 
   return (
     <form onSubmit={form.handleSubmit((values) => update.mutate(values))} className="grid gap-4 sm:grid-cols-2">
-      <Field label={dict.admin.staff.name} className="sm:col-span-2" error={form.formState.errors.name && dict.admin.stores.invalidAmount}>
+      <Field label={dict.admin.staff.name} className="sm:col-span-2" error={fieldError(dict, form.formState.errors.name?.message)}>
         <Input {...form.register("name")} autoComplete="off" />
       </Field>
       <Field label={dict.admin.staff.role}>

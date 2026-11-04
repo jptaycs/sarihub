@@ -12,6 +12,7 @@ import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
 import { interpolate } from "~/lib/i18n/interpolate";
 import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { fieldError } from "~/lib/i18n/validation";
 import {
   upsertProductInput,
   upsertUnitInput,
@@ -317,13 +318,13 @@ function ProductForm(props: { product?: CatalogProduct; onDone: () => void }) {
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => upsert.mutate(values))}
     >
-      <Field label={dict.admin.catalog.productNameTl} error={form.formState.errors.nameTl?.message}>
+      <Field label={dict.admin.catalog.productNameTl} error={fieldError(dict, form.formState.errors.nameTl?.message)}>
         <Input {...form.register("nameTl")} placeholder="Sibuyas" />
       </Field>
-      <Field label={dict.admin.catalog.productNameEn} error={form.formState.errors.nameEn?.message}>
+      <Field label={dict.admin.catalog.productNameEn} error={fieldError(dict, form.formState.errors.nameEn?.message)}>
         <Input {...form.register("nameEn")} placeholder="Red onion" />
       </Field>
-      <Field label={dict.admin.catalog.category} error={form.formState.errors.category?.message}>
+      <Field label={dict.admin.catalog.category} error={fieldError(dict, form.formState.errors.category?.message)}>
         <select {...form.register("category")} className={selectClass} style={selectStyle}>
           <option value="gulay">{dict.productCategories.gulay}</option>
           <option value="itlog">{dict.productCategories.itlog}</option>
@@ -391,18 +392,18 @@ function UnitForm(props: { productId: string; unit?: CatalogUnit; onDone: () => 
       className="grid gap-4 sm:grid-cols-2"
       onSubmit={form.handleSubmit((values) => upsert.mutate(values))}
     >
-      <Field label={dict.admin.catalog.unitLabelTl} error={form.formState.errors.labelTl?.message}>
+      <Field label={dict.admin.catalog.unitLabelTl} error={fieldError(dict, form.formState.errors.labelTl?.message)}>
         <Input {...form.register("labelTl")} placeholder="1 kilo" />
       </Field>
-      <Field label={dict.admin.catalog.unitLabelEn} error={form.formState.errors.labelEn?.message}>
+      <Field label={dict.admin.catalog.unitLabelEn} error={fieldError(dict, form.formState.errors.labelEn?.message)}>
         <Input {...form.register("labelEn")} placeholder="per kg" />
       </Field>
-      <Field label={dict.admin.catalog.sortOrder} error={form.formState.errors.sortOrder?.message}>
+      <Field label={dict.admin.catalog.sortOrder} error={fieldError(dict, form.formState.errors.sortOrder?.message)}>
         <Input {...form.register("sortOrder")} placeholder="01" />
       </Field>
       <Field
         label={dict.admin.catalog.weightGrams}
-        error={form.formState.errors.weightGrams?.message}
+        error={fieldError(dict, form.formState.errors.weightGrams?.message)}
       >
         <Input
           type="number"

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { validationMessage } from "~/lib/i18n/validation";
+
 /**
  * Admin-side inputs. Shared by the /admin forms (react-hook-form) and the
  * admin tRPC routers — single source of truth, per AGENTS.md.
@@ -14,8 +16,8 @@ export type SetOrderStatusInput = z.infer<typeof setOrderStatusInput>;
 
 export const upsertProductInput = z.object({
   id: z.string().uuid().optional(),
-  nameTl: z.string().trim().min(1, "Kailangan ang pangalan.").max(120),
-  nameEn: z.string().trim().min(1, "Kailangan ang English name.").max(120),
+  nameTl: z.string().trim().min(1, validationMessage("required")).max(120),
+  nameEn: z.string().trim().min(1, validationMessage("required")).max(120),
   category: z.enum(["gulay", "itlog", "isda", "kusina"]),
   isPerishable: z.boolean(),
   source: z.enum(["palengke", "warehouse"]),
@@ -26,12 +28,12 @@ export type UpsertProductInput = z.infer<typeof upsertProductInput>;
 export const upsertUnitInput = z.object({
   id: z.string().uuid().optional(),
   productId: z.string().uuid(),
-  labelTl: z.string().trim().min(1, "Kailangan ang label.").max(48),
-  labelEn: z.string().trim().min(1, "Kailangan ang English label.").max(48),
+  labelTl: z.string().trim().min(1, validationMessage("required")).max(48),
+  labelEn: z.string().trim().min(1, validationMessage("required")).max(48),
   sortOrder: z
     .string()
     .trim()
-    .regex(/^\d{1,8}$/, "Numero lamang po."),
+    .regex(/^\d{1,8}$/, validationMessage("numberOnly")),
   /** Grams per unit; null = unknown, excluded from the load total. */
   weightGrams: z.number().int().min(1).max(100_000).nullable(),
   isActive: z.boolean(),
@@ -56,18 +58,18 @@ export const recordAdjustmentInput = z.object({
     .int()
     .min(-100_000_000)
     .max(100_000_000)
-    .refine((v) => v !== 0, "Hindi pwedeng zero."),
-  reason: z.string().trim().min(3, "Kailangan ang dahilan.").max(200),
+    .refine((v) => v !== 0, validationMessage("nonZero")),
+  reason: z.string().trim().min(3, validationMessage("reasonRequired")).max(200),
   /** Client-generated, one per form submission. Retrying a flaky/double-tapped submit reuses it. */
   idempotencyKey: z.string().uuid(),
 });
 export type RecordAdjustmentInput = z.infer<typeof recordAdjustmentInput>;
 
 export const createStoreInput = z.object({
-  name: z.string().trim().min(1, "Kailangan ang pangalan ng tindahan.").max(120),
-  ownerName: z.string().trim().min(1, "Kailangan ang pangalan ng may-ari.").max(120),
+  name: z.string().trim().min(1, validationMessage("required")).max(120),
+  ownerName: z.string().trim().min(1, validationMessage("required")).max(120),
   /** Any PH-mobile spelling; parsed to E.164 server-side. */
-  phone: z.string().trim().min(1, "Kailangan ang numero."),
+  phone: z.string().trim().min(1, validationMessage("required")),
   addressLine: z.string().trim().max(300).optional(),
   /** Delivery pin set via the map picker; null = not pinned yet. */
   lat: z.number().min(-90).max(90).nullable(),
@@ -94,7 +96,7 @@ export type UpdateStoreInput = z.infer<typeof updateStoreInput>;
 
 export const importCsvInput = z.object({
   /** Raw CSV text, already read client-side via file.text() — one parser, server-side only. */
-  csv: z.string().trim().min(1, "Walang laman ang file."),
+  csv: z.string().trim().min(1, validationMessage("emptyFile")),
 });
 export type ImportCsvInput = z.infer<typeof importCsvInput>;
 

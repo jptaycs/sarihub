@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { validationMessage } from "~/lib/i18n/validation";
+
 /**
  * Crew-app (truck helper) inputs — shared by the /crew forms and the `crew`
  * tRPC router, single source of truth per AGENTS.md.
@@ -26,7 +28,7 @@ export const recordStockMovementInput = z
   })
   .superRefine((val, ctx) => {
     if (val.kind === "reduce" && !val.reason) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reason"] });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reason"], message: validationMessage("reasonRequired") });
     }
   });
 export type RecordStockMovementInput = z.infer<typeof recordStockMovementInput>;
@@ -54,7 +56,7 @@ export const createPosSaleInput = z
   })
   .superRefine((val, ctx) => {
     if (val.payment === "suki" && !val.storeId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["storeId"] });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["storeId"], message: validationMessage("storeRequired") });
     }
   });
 export type CreatePosSaleInput = z.infer<typeof createPosSaleInput>;
