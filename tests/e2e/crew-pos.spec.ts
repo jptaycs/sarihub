@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { OWNER_STATE, STAFF_STATE } from "./auth.paths";
+
 /**
  * Crew POS money path: a suki-tab sale rung up on the truck lands on the
  * store owner's tab, shows up in their tab activity, and comes off the
@@ -19,24 +21,20 @@ async function readSukiBalance(page: Page): Promise<number> {
 }
 
 test("crew POS: suki sale charges the owner's tab and reduces truck stock", async ({ browser }) => {
-  const ownerContext = await browser.newContext();
-  const staffContext = await browser.newContext();
+  // Sessions come from auth.setup.ts — no OTP sends here.
+  const ownerContext = await browser.newContext({ storageState: OWNER_STATE });
+  const staffContext = await browser.newContext({ storageState: STAFF_STATE });
   const ownerPage = await ownerContext.newPage();
   const staffPage = await staffContext.newPage();
 
   let baselineBalance = 0;
-  await test.step("owner dev-login and read baseline balance", async () => {
-    await ownerPage.goto("/login");
-    await ownerPage.getByRole("button", { name: "Mag-login: Sari-Sari Owner" }).click();
-    await ownerPage.waitForURL("**/home");
+  await test.step("owner reads baseline balance", async () => {
+    await ownerPage.goto("/home");
     baselineBalance = await readSukiBalance(ownerPage);
   });
 
   let unitPrice = 0;
   await test.step("staff (admin) opens the crew POS", async () => {
-    await staffPage.goto("/login");
-    await staffPage.getByRole("button", { name: "Mag-login: Staff (admin)" }).click();
-    await staffPage.waitForURL("**/admin/orders");
     await staffPage.goto("/crew/sell");
     await expect(staffPage.getByRole("heading", { name: "Benta sa truck" })).toBeVisible();
   });
@@ -54,13 +52,16 @@ test("crew POS: suki sale charges the owner's tab and reduces truck stock", asyn
   });
 
   await test.step("pick the owner's store and charge the suki tab", async () => {
-    await staffPage.getByRole("button", { name: "Tindahan" }).click();
-    await staffPage.getByPlaceholder("Hanapin ang tindahan o may-ari").fill("Suki");
-    await staffPage.getByRole("button", { name: /Tindahan ni Suki/ }).first().click();
-    await staffPage.getByRole("button", { name: "Suki tab" }).click();
-    await staffPage.getByRole("button", { name: /Itala ang benta/ }).click();
-    await expect(staffPage.getByRole("heading", { name: "Nabenta!" })).toBeVisible();
-    await staffPage.getByRole("button", { name: "Sige" }).click();
+    // Scope to the sheet: once sales exist today, the list behind it has
+    // "Tindahan ni Suki …" rows with the same text, under the modal overlay.
+    const sheet = staffPage.getByRole("dialog", { name: "Benta" });
+    await sheet.getByRole("button", { name: "Tindahan", exact: true }).click();
+    await sheet.getByPlaceholder("Hanapin ang tindahan o may-ari").fill("Suki");
+    await sheet.getByRole("button", { name: /Tindahan ni Suki/ }).first().click();
+    await sheet.getByRole("button", { name: "Suki tab" }).click();
+    await sheet.getByRole("button", { name: /Itala ang benta/ }).click();
+    await expect(sheet.getByRole("heading", { name: "Nabenta!" })).toBeVisible();
+    await sheet.getByRole("button", { name: "Sige" }).click();
   });
 
   await test.step("owner's balance rose by the locked price and the activity names the truck", async () => {
@@ -74,8 +75,13 @@ test("crew POS: suki sale charges the owner's tab and reduces truck stock", asyn
 
   await test.step("truck stock shows the kilo as sold", async () => {
     await staffPage.goto("/crew/stock");
-    const card = staffPage.getByRole("article").filter({ hasText: "Sibuyas" }).first();
-    await expect(card).toBeVisible();
+    const row = staffPage
+      .getByRole("listitem")
+      .filter({ has: staffPage.getByRole("button", { name: "Dagdagan ang Sibuyas 1 kilo" }) });
+    await expect(row).toBeVisible();
+    // Columns: Order · Karga · Benta · Hatid · Natitira — the sale shows under Benta.
+    const sold = Number(await row.locator(".tnum > span").nth(2).textContent());
+    expect(sold).toBeGreaterThanOrEqual(1);
   });
 
   await ownerContext.close();

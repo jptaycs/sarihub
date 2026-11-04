@@ -35,6 +35,10 @@ function loadCart(storageKey: string): CartState {
  *
  * `storageKey` separates carts that must never mix: the owner's order cart
  * (default) and the crew app's POS sale cart live under different keys.
+ *
+ * `hydrated` is false until the stored cart has been read — anything that
+ * decides based on "is the cart empty?" must wait for it, or it decides on
+ * the SSR placeholder.
  */
 export function useCart(storageKey: string = OWNER_CART_KEY) {
   const [cart, setCart] = useState<CartState>(freshCart);
@@ -71,5 +75,5 @@ export function useCart(storageKey: string = OWNER_CART_KEY) {
     [],
   );
 
-  return { cart, setQuantity, clear, rotateKey };
+  return { cart, setQuantity, clear, rotateKey, hydrated };
 }

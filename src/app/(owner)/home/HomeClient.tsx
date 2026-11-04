@@ -78,7 +78,7 @@ export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }
   // Guests have no store; skip the call rather than eat an UNAUTHORIZED.
   const storeQuery = trpc.store.me.useQuery(undefined, { enabled: signedIn });
   const catalogQuery = trpc.catalog.today.useQuery();
-  const { cart, setQuantity, clear, rotateKey } = useCart();
+  const { cart, setQuantity, clear, rotateKey, hydrated } = useCart();
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<ProductCategory | null>(null);
@@ -190,11 +190,14 @@ export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }
   // hydrated, then drop `?checkout=1` so a refresh doesn't reopen it again.
   const [autoOpened, setAutoOpened] = useState(false);
   useEffect(() => {
-    if (!props.openCartOnLoad || autoOpened || !catalogQuery.data) return;
+    // `hydrated` matters: coming back from sign-in, the catalog is often
+    // already in the query cache, so this would otherwise run against the
+    // empty pre-hydration cart and never open the sheet.
+    if (!props.openCartOnLoad || autoOpened || !catalogQuery.data || !hydrated) return;
     setAutoOpened(true);
     if (cartLines.length > 0) setSheetOpen(true);
     router.replace("/home", { scroll: false });
-  }, [props.openCartOnLoad, autoOpened, catalogQuery.data, cartLines.length, router]);
+  }, [props.openCartOnLoad, autoOpened, catalogQuery.data, hydrated, cartLines.length, router]);
 
   const store = storeQuery.data ?? null;
   const loading = catalogQuery.isLoading || (signedIn && storeQuery.isLoading);

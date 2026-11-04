@@ -79,6 +79,19 @@ journaled) and `drizzle/seed.sql` with `psql`, and run `TEST_DATABASE_URL=<local
 (or just the DB-backed files with `pnpm test:integration`). Vitest aliases `server-only` to `src/test/serverOnlyStub.ts`
 so services import cleanly.
 
+**Playwright suite (live project).** `pnpm test:e2e` boots `next dev` and runs against the **live**
+Supabase project in `.env` — there is no e2e database. Hard-won rules: every dev-login is a real
+`signInWithOtp` to one of the two test numbers and Supabase throttles repeat sends to the same
+number (the app shows it as "Maraming subok po…"), so `tests/e2e/auth.setup.ts` signs in once per
+role and saves sessions under `tests/e2e/.auth/` (git-ignored); specs open contexts with
+`storageState` from `tests/e2e/auth.paths.ts`, and only `guest-checkout.spec.ts` still signs in
+itself because the redirect is what it tests (re-running back-to-back and seeing the rate-limit
+copy on `/login` means wait a minute). `workers: 1` on purpose — the specs share one owner account
+and would race each other's suki balance. 90s per test, because the dev server compiles each route
+on first hit. Prices expire after `PRICE_VALIDITY_HOURS` (24), so on a cold day everything is
+"walang presyo" until `money-path.spec.ts` sets one — run the whole suite, not a lone spec. Once per
+machine: `pnpm exec playwright install chromium`.
+
 Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datetime`, never `new Date()`. Tagalog-first copy in every user-facing string — but the app is bilingual (Tagalog/English) via a switcher on `/login`, so **every new user-facing string, including server-emitted tRPC/Server Action error messages, must go through `src/lib/i18n/dictionaries/{tl,en}.ts`**, never a hardcoded literal. Add the key to `tl.ts` first (canonical), then `en.ts` (TypeScript enforces the same shape). Client components read strings via `useDictionary()`/`useLocale()` from `~/lib/i18n/LanguageProvider`; Server Components and services via `getDictionary(await getServerLocale())`, threading `Locale` down as a parameter the same way `Db`/`userId` are threaded. Use `interpolate(template, vars)` for any string with a dynamic value. DB-sourced content (product names — already dual `nameTl`/`nameEn`, categories, store/owner/route names) is explicitly out of scope for the toggle; see the dictionaries' file comments for why.
 
 ## Roadmap / to-do
@@ -128,7 +141,7 @@ Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check it
 - [x] Guest storefront: `/` and `/home` are public (middleware), `catalog.today` is a `publicProcedure`. Guests browse today's prices and fill the localStorage cart; the cart sheet swaps "Place order" for "Sign in to place order", linking to `/login?next=/home?checkout=1`. `next` is threaded through `/login` → `/verify` (and the dev login) and validated by `safeNext` (`src/lib/safeNext.ts`, same-origin paths only — never redirect to a raw `next`). Returning with `?checkout=1` reopens the cart. Other protected pages redirect to `/login?next=<path>`.
 - [x] Admin console responsive: sidebar at `lg`+, glass top bar + bottom tab bar on phones, tables collapse to cards.
 - [x] Buyer and driver screens restyled, phone-sized.
-- [ ] Not yet verified live against the Supabase project (no `.env` on the machine that built it) — run the Playwright specs (`tests/e2e/guest-checkout.spec.ts`, `money-path.spec.ts`) before shipping.
+- [x] Verified live 2026-11-04: `guest-checkout.spec.ts` and `money-path.spec.ts` pass against the Supabase project. The first live run caught a real bug — coming back from sign-in with `?checkout=1`, the catalog was already in the query cache so the open-cart effect ran before the cart had hydrated from localStorage and never opened the sheet (`useCart` now exposes `hydrated`; the effect waits for it).
 
 ### Then: truck crew app + POS (`/crew`)
 Spec: `docs/superpowers/specs/2026-11-03-truck-crew-pos-design.md`. Plan: `docs/superpowers/plans/2026-11-03-truck-crew-pos-plan.md`.
@@ -140,7 +153,9 @@ Spec: `docs/superpowers/specs/2026-11-03-truck-crew-pos-design.md`. Plan: `docs/
 - [x] Admin `/admin/staff`: list, register by phone (owner must have signed in once, refuses a phone that owns a store), change role, (de)activate (never yourself)
 - [x] RLS: new tables staff-SELECT via `is_active_staff()`, UPDATE/DELETE revoked (append-only); **the same file enables RLS on `notification_queue`, which 0005 had left readable through PostgREST with the anon key**
 - [x] Verified: migration 0009 + all RLS files + seed apply cleanly to a local Postgres; service integration tests (`posSales`, `truckStock`, `orders.advanceOrderStatus`) pass against it; `next build` compiles every route
-- [ ] **Not yet applied to the live Supabase project** — its host (`vxwqearlhoklioatfygc.supabase.co`) did not resolve when this shipped. Once the project is restored or relinked: `pnpm db:migrate` (applies 0009 + 0010), then `psql -f drizzle/0009_truck_crew_pos_rls.sql` **and** `psql -f drizzle/0010_hot_path_indexes_rls.sql` (the suki-balance trigger fix lives there — skipping it leaves the lost-update bug in production), then run `tests/e2e/crew-pos.spec.ts` and the existing specs. Creating a real `helper` account still needs the Twilio item above (only the two test-OTP numbers can sign in)
+- [x] Applied to the live Supabase project 2026-11-04: `pnpm db:migrate` (0009 + 0010), `drizzle/0009_truck_crew_pos_rls.sql` and `drizzle/0010_hot_path_indexes_rls.sql` via psql (verified: RLS on the three new tables + `notification_queue`, `recompute_suki_balance` carries the row lock). `tests/e2e/crew-pos.spec.ts` passes live. The host had not resolved earlier only because the free-tier project was **paused** for inactivity (`supabase projects list` shows `INACTIVE`); restore it from the dashboard, then wait for `ACTIVE_HEALTHY`.
+- [ ] Creating a real `helper` account still needs the Twilio item above (only the two test-OTP numbers can sign in)
+- [ ] `crew-pos.spec.ts` leaves a real POS sale behind on every run (₱ on the test owner's suki tab + a `sale` stock movement) because POS sales have no reversal path by design. Fine for the seed owner for a while; add an admin-side suki adjustment (or a dedicated test store) before the tab limit (₱2,000) makes the spec fail.
 - `inventory_snapshots` / `inventory_snapshot_items` (migration 0000) are unused and superseded by `truck_stock_movements`; left in place because dropping is a destructive migration
 
 ### Hardening pass (shipped with the crew app, 2026-11-03)

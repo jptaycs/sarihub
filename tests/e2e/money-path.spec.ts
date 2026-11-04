@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { OWNER_STATE, STAFF_STATE } from "./auth.paths";
+
 /** Parses the first "₱1,234.56"-shaped amount out of a string, returning pesos as a number. */
 function pesoTextToNumber(text: string): number {
   const match = /₱([\d,]+\.\d{2})/.exec(text);
@@ -34,22 +36,18 @@ async function setSibuyasKiloPrice(page: Page, pesos: string): Promise<void> {
 }
 
 test("money path: price lock survives a price change, suki ledger round-trips on place/cancel", async ({ browser }) => {
-  const ownerContext = await browser.newContext();
-  const staffContext = await browser.newContext();
+  // Sessions come from auth.setup.ts — no OTP sends here.
+  const ownerContext = await browser.newContext({ storageState: OWNER_STATE });
+  const staffContext = await browser.newContext({ storageState: STAFF_STATE });
   const ownerPage = await ownerContext.newPage();
   const staffPage = await staffContext.newPage();
 
-  await test.step("owner dev-login", async () => {
-    await ownerPage.goto("/login");
-    await ownerPage.getByRole("button", { name: "Mag-login: Sari-Sari Owner" }).click();
-    await ownerPage.waitForURL("**/home");
+  await test.step("owner session lands on /home", async () => {
+    await ownerPage.goto("/home");
+    await expect(ownerPage.getByRole("link").filter({ hasText: "Suki tab" })).toBeVisible();
   });
 
-  await test.step("staff (admin) dev-login, navigate to price board", async () => {
-    await staffPage.goto("/login");
-    await staffPage.getByRole("button", { name: "Mag-login: Staff (admin)" }).click();
-    // Admin role bounces off the owner /home guard straight to /admin/orders.
-    await staffPage.waitForURL("**/admin/orders");
+  await test.step("staff (admin) opens the price board", async () => {
     await staffPage.goto("/buyer/prices");
     await expect(staffPage.getByRole("heading", { name: "Presyo ngayon" })).toBeVisible();
   });

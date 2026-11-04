@@ -37,3 +37,4 @@ next-env.d.ts
 !.env.example
 !.env.*.example
 !*.env.example
+tests/e2e/.auth
