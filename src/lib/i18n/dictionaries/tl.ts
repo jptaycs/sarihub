@@ -80,6 +80,7 @@ export const tl = {
     cartItemsRemovedNotice: "Inalis sa order — nagbago ang presyo o naubos: {names}",
     cartItemsRemovedDismiss: "Ok, gets ko",
     todaysPrices: "Presyo ngayong araw",
+    offlineNotice: "Walang signal — presyo noong {time} ang nakikita ninyo. Mag-order pa rin po; susubukan ulit pag may signal.",
     addAria: "Idagdag ang {name} {unit}",
     inCart: "{count} sa cart",
     unitsHeading: "Pumili ng sukat",

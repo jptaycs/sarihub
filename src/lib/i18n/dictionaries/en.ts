@@ -77,6 +77,7 @@ export const en: Dictionary = {
     cartItemsRemovedNotice: "Removed from your order — the price or stock changed: {names}",
     cartItemsRemovedDismiss: "Got it",
     todaysPrices: "Today's prices",
+    offlineNotice: "No signal — you're seeing prices from {time}. You can still order; we'll retry when you're back online.",
     addAria: "Add {name} {unit}",
     inCart: "{count} in cart",
     unitsHeading: "Choose a size",

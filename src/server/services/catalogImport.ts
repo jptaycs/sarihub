@@ -3,7 +3,7 @@ import "server-only";
 
 import { addHours } from "date-fns";
 import Papa from "papaparse";
-import { and, eq, sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 import { now } from "~/lib/datetime";
 import { interpolate } from "~/lib/i18n/interpolate";
@@ -33,10 +33,14 @@ const UNIT_SPECS = [
 
 /**
  * Import a distributor pricelist CSV: header row `name, category, pack_price,
- * individual_price` (any order, case-insensitive). Best-effort per row — one
- * bad row is skipped and reported, the rest of the upload still lands, each
- * row in its own transaction so one failure can't roll back another row's
- * success.
+ * individual_price` (any order, case-insensitive). Rows are validated first —
+ * a bad row is skipped and reported, the rest of the upload still lands.
+ *
+ * The valid rows then go through one transaction in six set-based statements
+ * (products lookup, insert, category update; units lookup, insert; prices
+ * insert) regardless of row count, instead of ~8 statements per row. Every
+ * row was validated up front, so a database error here is a real fault and
+ * rolls the whole upload back rather than leaving half of it in.
  */
 export async function importCatalogCsv(
   db: Db,
@@ -55,9 +59,6 @@ export async function importCatalogCsv(
   }
 
   const rows = parsed.data.slice(0, MAX_ROWS);
-  let created = 0;
-  let updated = 0;
-  let priceRowsInserted = 0;
   const skipped: Array<{ row: number; reason: string }> = [];
 
   if (parsed.data.length > MAX_ROWS) {
@@ -67,6 +68,9 @@ export async function importCatalogCsv(
     });
   }
 
+  // Validate everything first. A later duplicate of the same name in one file
+  // wins (last write), matching what two separate uploads would do.
+  const byName = new Map<string, ValidatedRow>();
   for (const [index, raw] of rows.entries()) {
     const rowNum = index + 2; // +1 for 0-index, +1 for the header row
     const validation = validateRow(raw, errors);
@@ -74,107 +78,126 @@ export async function importCatalogCsv(
       skipped.push({ row: rowNum, reason: validation.reason });
       continue;
     }
-    try {
-      const result = await importOneRow(db, validation.row, capturedBy);
-      if (result.createdProduct) created++;
-      else updated++;
-      priceRowsInserted += result.priceRowsInserted;
-    } catch (error) {
-      skipped.push({ row: rowNum, reason: error instanceof Error ? error.message : String(error) });
-    }
+    byName.set(validation.row.name.toLowerCase(), validation.row);
   }
+  const valid = [...byName.values()];
+  if (valid.length === 0) return { created: 0, updated: 0, priceRowsInserted: 0, skipped };
 
+  const { created, updated, priceRowsInserted } = await importRows(db, valid, capturedBy);
   return { created, updated, priceRowsInserted, skipped };
 }
 
-async function importOneRow(
+async function importRows(
   db: Db,
-  row: ValidatedRow,
+  rows: ValidatedRow[],
   capturedBy: string,
-): Promise<{ createdProduct: boolean; priceRowsInserted: number }> {
+): Promise<{ created: number; updated: number; priceRowsInserted: number }> {
   return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: products.id })
-      .from(products)
-      .where(sql`lower(${products.nameTl}) = lower(${row.name})`)
-      .limit(1);
+    const names = rows.map((r) => r.name.toLowerCase());
 
-    let productId: string;
-    let createdProduct = false;
-    if (existing) {
-      productId = existing.id;
-      await tx.update(products).set({ category: row.category }).where(eq(products.id, productId));
-    } else {
-      const [inserted] = await tx
+    // 1. Which names already exist (case-insensitive on the Tagalog name).
+    const existing = await tx
+      .select({ id: products.id, nameTl: products.nameTl })
+      .from(products)
+      .where(inArray(sql`lower(${products.nameTl})`, names));
+    const idByName = new Map(existing.map((p) => [p.nameTl.toLowerCase(), p.id]));
+
+    // 2. Create the missing products in one statement.
+    const missing = rows.filter((r) => !idByName.has(r.name.toLowerCase()));
+    if (missing.length > 0) {
+      const inserted = await tx
         .insert(products)
-        .values({
-          nameTl: row.name,
-          nameEn: row.name,
-          category: row.category,
-          isPerishable: true,
-          source: "palengke",
-        })
-        .returning({ id: products.id });
-      productId = inserted!.id;
-      createdProduct = true;
+        .values(
+          missing.map((r) => ({
+            nameTl: r.name,
+            nameEn: r.name,
+            category: r.category,
+            isPerishable: true,
+            source: "palengke" as const,
+          })),
+        )
+        .returning({ id: products.id, nameTl: products.nameTl });
+      for (const p of inserted) idByName.set(p.nameTl.toLowerCase(), p.id);
     }
 
+    // 3. Re-file the existing ones under the category the sheet says.
+    const toUpdate = rows.filter((r) => !missing.includes(r));
+    if (toUpdate.length > 0) {
+      const pairs = toUpdate.map(
+        (r) => sql`(${idByName.get(r.name.toLowerCase())!}::uuid, ${r.category}::product_category)`,
+      );
+      await tx.execute(sql`
+        UPDATE products AS p SET category = v.category
+        FROM (VALUES ${sql.join(pairs, sql`, `)}) AS v(id, category)
+        WHERE p.id = v.id AND p.category IS DISTINCT FROM v.category`);
+    }
+
+    // 4. Existing units for every product touched: ids for the price rows and
+    //    the highest sort order, so new units file after a product's real ones
+    //    (hardcoding "01"/"02" collides with seed labels like "1 kilo").
+    const productIds = rows.map((r) => idByName.get(r.name.toLowerCase())!);
+    const unitRows = await tx
+      .select({
+        id: productUnits.id,
+        productId: productUnits.productId,
+        labelTl: productUnits.labelTl,
+        sortOrder: productUnits.sortOrder,
+      })
+      .from(productUnits)
+      .where(inArray(productUnits.productId, productIds));
+    const unitId = new Map(unitRows.map((u) => [`${u.productId}\0${u.labelTl}`, u.id]));
+    const nextSortOrder = new Map<string, number>();
+    for (const u of unitRows) {
+      const n = Number.parseInt(u.sortOrder, 10) || 0;
+      nextSortOrder.set(u.productId, Math.max(nextSortOrder.get(u.productId) ?? 0, n) + 1);
+    }
+
+    // 5. Create the missing units in one statement.
+    const missingUnits: Array<{ productId: string; labelTl: string; labelEn: string; sortOrder: string }> = [];
+    for (const productId of new Set(productIds)) {
+      for (const spec of UNIT_SPECS) {
+        if (unitId.has(`${productId}\0${spec.labelTl}`)) continue;
+        const order = nextSortOrder.get(productId) ?? 1;
+        nextSortOrder.set(productId, order + 1);
+        missingUnits.push({
+          productId,
+          labelTl: spec.labelTl,
+          labelEn: spec.labelEn,
+          sortOrder: String(order).padStart(2, "0"),
+        });
+      }
+    }
+    if (missingUnits.length > 0) {
+      const inserted = await tx
+        .insert(productUnits)
+        .values(missingUnits.map((u) => ({ ...u, weightGrams: null })))
+        .returning({ id: productUnits.id, productId: productUnits.productId, labelTl: productUnits.labelTl });
+      for (const u of inserted) unitId.set(`${u.productId}\0${u.labelTl}`, u.id);
+    }
+
+    // 6. Today's prices, one append-only insert.
     const at = now();
     const validUntil = addHours(at, PRICE_VALIDITY_HOURS);
-    let priceRowsInserted = 0;
-
-    // Newly-created units get a sort order after the product's existing
-    // units, instead of hardcoding "01"/"02" — those can collide with a
-    // pre-existing product's real unit labels (e.g. seed data's "1 kilo").
-    const existingUnitRows = await tx
-      .select({ sortOrder: productUnits.sortOrder })
-      .from(productUnits)
-      .where(eq(productUnits.productId, productId));
-    let nextSortOrder = existingUnitRows.length
-      ? Math.max(...existingUnitRows.map((u) => Number.parseInt(u.sortOrder, 10) || 0)) + 1
-      : 1;
-
-    for (const spec of UNIT_SPECS) {
-      const [existingUnit] = await tx
-        .select({ id: productUnits.id })
-        .from(productUnits)
-        .where(and(eq(productUnits.productId, productId), eq(productUnits.labelTl, spec.labelTl)))
-        .limit(1);
-
-      let unitId: string;
-      if (existingUnit) {
-        unitId = existingUnit.id;
-      } else {
-        const [insertedUnit] = await tx
-          .insert(productUnits)
-          .values({
-            productId,
-            labelTl: spec.labelTl,
-            labelEn: spec.labelEn,
-            sortOrder: String(nextSortOrder).padStart(2, "0"),
-            weightGrams: null,
-          })
-          .returning({ id: productUnits.id });
-        unitId = insertedUnit!.id;
-        nextSortOrder++;
-      }
-
-      const centavos = row[spec.priceField];
-      if (centavos !== null) {
-        await tx
-          .insert(dailyPrices)
-          .values({
-            productUnitId: unitId,
+    const priceValues = rows.flatMap((r) => {
+      const productId = idByName.get(r.name.toLowerCase())!;
+      return UNIT_SPECS.flatMap((spec) => {
+        const centavos = r[spec.priceField];
+        if (centavos === null) return [];
+        return [
+          {
+            productUnitId: unitId.get(`${productId}\0${spec.labelTl}`)!,
             priceCentavos: BigInt(centavos),
             capturedAt: at,
             validUntil,
             capturedBy,
-          })
-          .onConflictDoNothing();
-        priceRowsInserted++;
-      }
+          },
+        ];
+      });
+    });
+    if (priceValues.length > 0) {
+      await tx.insert(dailyPrices).values(priceValues).onConflictDoNothing();
     }
 
-    return { createdProduct, priceRowsInserted };
+    return { created: missing.length, updated: toUpdate.length, priceRowsInserted: priceValues.length };
   });
 }

@@ -31,6 +31,7 @@ import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { interpolate } from "~/lib/i18n/interpolate";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import type { Locale } from "~/lib/i18n/locale";
+import { PERSIST_MAX_AGE_MS } from "~/lib/queryPersist";
 import { trpc } from "~/lib/trpc/client";
 import { useCart } from "~/lib/useCart";
 import type { ProductCategory } from "~/server/db/schema";
@@ -74,10 +75,20 @@ function deliveryLabel(dict: Dictionary, locale: Locale, deliverOn: Date): strin
 export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }) {
   const { signedIn } = props;
   const dict = useDictionary();
+  const { locale } = useLocale();
   const router = useRouter();
   // Guests have no store; skip the call rather than eat an UNAUTHORIZED.
   const storeQuery = trpc.store.me.useQuery(undefined, { enabled: signedIn });
-  const catalogQuery = trpc.catalog.today.useQuery();
+  // Persisted across app launches (see queryPersist.ts): gcTime ≥ the
+  // persister's maxAge or the restored copy is collected before it's shown;
+  // staleTime 0 so a restored list always refetches on mount instead of
+  // passing as fresh for 30 s; one retry so "no signal" shows in about a
+  // second rather than after three backoffs.
+  const catalogQuery = trpc.catalog.today.useQuery(undefined, {
+    gcTime: PERSIST_MAX_AGE_MS,
+    staleTime: 0,
+    retry: 1,
+  });
   const { cart, setQuantity, clear, rotateKey, hydrated } = useCart();
 
   const [search, setSearch] = useState("");
@@ -201,7 +212,14 @@ export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }
 
   const store = storeQuery.data ?? null;
   const loading = catalogQuery.isLoading || (signedIn && storeQuery.isLoading);
-  const failed = catalogQuery.error || (signedIn && storeQuery.error);
+  // A cached price list beats a blank error: with no signal the owner still
+  // sees last night's prices (flagged below). No cache at all is a real failure.
+  // `paused` is React Query's state when the browser reports no network at
+  // all — the fetch never starts, so there is no error to show either.
+  const offlineCatalog = Boolean(
+    catalogQuery.data && (catalogQuery.error || catalogQuery.fetchStatus === "paused"),
+  );
+  const failed = (catalogQuery.error && !catalogQuery.data) || (signedIn && storeQuery.error);
 
   return (
     <div className="flex flex-1 flex-col">
@@ -276,6 +294,14 @@ export function HomeClient(props: { signedIn: boolean; openCartOnLoad: boolean }
       )}
 
       <h2 className="section-label mt-6 mb-2 px-1">{dict.home.todaysPrices}</h2>
+
+      {offlineCatalog && catalogQuery.data && (
+        <p role="status" className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[13px] font-medium text-warning">
+          {interpolate(dict.home.offlineNotice, {
+            time: formatManila(catalogQuery.data.pricedAt, "EEE h:mm a", locale),
+          })}
+        </p>
+      )}
 
       <div className="flex flex-1 flex-col gap-3">
         {loading && <ProductSkeleton />}
