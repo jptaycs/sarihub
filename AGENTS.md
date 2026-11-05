@@ -98,6 +98,8 @@ Money is integer centavos (`bigint`) end to end. `now()` comes from `~/lib/datet
 
 Work top-to-bottom; each unchecked block is roughly one PR-sized slice. Check items off as they land.
 
+**Deployed (2026-11-05):** Vercel project `sarihub` on the appnado team, Hobby plan, region `sin1`, production at https://sarihub-six.vercel.app. Deployed from the CLI (`vercel deploy --prod`); the project is **not** connected to the GitHub repo yet, so a push to `main` does not deploy until someone runs `vercel git connect` or links it in the Vercel dashboard. Production env holds the four Supabase keys only (`vercel env ls production`); `.vercel/` and `.env.local` (Vercel's OIDC token) are gitignored. Smoke-tested: guest storefront and catalog API from the live DB, protected pages redirect to `/login?next=`, dev-login buttons absent, cron returns 401 without `CRON_SECRET`.
+
 **Owner's decision (2026-11-04): no third-party API that needs a card or a subscription.** Twilio (real-number sign-in), Mapbox (driver map / pin picker), Semaphore (order SMS) and PayMongo stay dormant behind their env keys; the code paths are built and fail closed. Don't spend time on them unless the owner reverses this. Sign-in stays on the two Supabase test-OTP numbers, so onboarding a real store owner or helper means adding their number under Auth → Phone → test OTP in the Supabase dashboard.
 
 ### Done
