@@ -35,6 +35,7 @@ export const en: Dictionary = {
     errors: {
       invalidPhone: "That number isn't right. Enter a 10-digit mobile number.",
       rateLimited: "Too many attempts. Try again in a few minutes.",
+      unregisteredNumber: "This number isn't registered yet. Call the number below to get access.",
       sendFailed: "We couldn't send the code. Please try again.",
     },
   },

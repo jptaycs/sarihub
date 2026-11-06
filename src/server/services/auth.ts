@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 
 import { createSupabaseServer } from "~/lib/supabase/server";
 import { parsePhPhone } from "~/lib/format";
+import { classifyOtpSendError } from "~/lib/otpSendError";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import { db } from "~/server/db";
@@ -43,7 +44,7 @@ export const activeStaffForRequest = cache(async (): Promise<Staff | null> => {
 
 export type StartOtpResult =
   | { ok: true; phoneE164: string }
-  | { ok: false; reason: "invalid_phone" | "rate_limited" | "send_failed"; message: string };
+  | { ok: false; reason: "invalid_phone" | "rate_limited" | "unregistered_number" | "send_failed"; message: string };
 
 export async function startPhoneOtp(
   rawPhone: string,
@@ -62,10 +63,13 @@ export async function startPhoneOtp(
   });
 
   if (error) {
-    if (error.status === 429) {
-      return { ok: false, reason: "rate_limited", message: dict.rateLimited };
-    }
-    return { ok: false, reason: "send_failed", message: dict.sendFailed };
+    const reason = classifyOtpSendError(error);
+    const message = {
+      rate_limited: dict.rateLimited,
+      unregistered_number: dict.unregisteredNumber,
+      send_failed: dict.sendFailed,
+    }[reason];
+    return { ok: false, reason, message };
   }
 
   return { ok: true, phoneE164 };

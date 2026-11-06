@@ -38,6 +38,7 @@ export const tl = {
     errors: {
       invalidPhone: "Hindi tama ang numero. Ipasok po ang 10-digit na mobile.",
       rateLimited: "Maraming subok po. Subukan ulit pagkalipas ng ilang minuto.",
+      unregisteredNumber: "Hindi pa naka-rehistro ang numerong ito. Tumawag po sa numero sa ibaba para makapag-sign in.",
       sendFailed: "Hindi namin nasend ang code. Subukan po ulit.",
     },
   },
