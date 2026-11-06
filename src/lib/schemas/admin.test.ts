@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createStoreInput, importCsvInput, recordAdjustmentInput, upsertProductInput, upsertUnitInput } from "./admin";
+import { createStaffInput, createStoreInput, importCsvInput, recordAdjustmentInput, upsertProductInput, upsertUnitInput } from "./admin";
 import { bulkAdjustPricesInput, setPriceInput } from "./price";
 import { createPosSaleInput, recordStockMovementInput } from "./crew";
 
@@ -102,5 +102,39 @@ describe("schema messages are validation keys", () => {
         }),
       ),
     ).toBe("validation.storeRequired");
+  });
+});
+
+describe("optional sign-in email (Google/Facebook accounts)", () => {
+  const store = {
+    name: "Tindahan",
+    ownerName: "Aling Nena",
+    phone: "09171234567",
+    lat: null,
+    lng: null,
+    routeId: null,
+    stopOrder: null,
+    sukiLimitCentavos: 0,
+  };
+
+  it("is optional, and a blank field means none", () => {
+    expect(createStoreInput.parse(store).loginEmail).toBeUndefined();
+    expect(createStoreInput.parse({ ...store, loginEmail: "  " }).loginEmail).toBeUndefined();
+  });
+
+  it("is trimmed and lower-cased", () => {
+    expect(createStoreInput.parse({ ...store, loginEmail: " Nena@Gmail.com " }).loginEmail).toBe(
+      "nena@gmail.com",
+    );
+    expect(
+      createStaffInput.parse({ name: "Ben", phone: "09171234567", role: "helper", loginEmail: "Ben@x.ph" })
+        .loginEmail,
+    ).toBe("ben@x.ph");
+  });
+
+  it("rejects a malformed address with a validation key", () => {
+    expect(firstMessage(createStoreInput.safeParse({ ...store, loginEmail: "not-an-email" }))).toBe(
+      "validation.email",
+    );
   });
 });

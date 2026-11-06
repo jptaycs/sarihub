@@ -65,6 +65,19 @@ export const recordAdjustmentInput = z.object({
 });
 export type RecordAdjustmentInput = z.infer<typeof recordAdjustmentInput>;
 
+/**
+ * Optional e-mail of a Google/Facebook sign-in, for linking someone who
+ * doesn't sign in by phone. Blank means none; stored lower-cased because
+ * Supabase keeps auth.users.email lower-case.
+ */
+const loginEmailInput = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .optional()
+  .transform((v) => (v ? v : undefined))
+  .pipe(z.string().email(validationMessage("email")).max(254).optional());
+
 export const createStoreInput = z.object({
   name: z.string().trim().min(1, validationMessage("required")).max(120),
   ownerName: z.string().trim().min(1, validationMessage("required")).max(120),
@@ -78,6 +91,7 @@ export const createStoreInput = z.object({
   /** Position along the route's morning run; null = not sequenced yet. */
   stopOrder: z.number().int().min(1).max(999).nullable(),
   sukiLimitCentavos: z.number().int().min(0).max(100_000_000),
+  loginEmail: loginEmailInput,
 });
 export type CreateStoreInput = z.infer<typeof createStoreInput>;
 
@@ -108,6 +122,7 @@ export const createStaffInput = z.object({
   /** Any PH-mobile spelling; parsed to E.164 server-side. */
   phone: z.string().trim().min(1),
   role: staffRoleInput,
+  loginEmail: loginEmailInput,
 });
 export type CreateStaffInput = z.infer<typeof createStaffInput>;
 

@@ -246,6 +246,9 @@ function CreateStoreForm(props: {
       <Field label={dict.admin.stores.ownerMobile} error={fieldError(dict, form.formState.errors.phone?.message)}>
         <Input {...form.register("phone")} inputMode="tel" placeholder="0917 123 4567" />
       </Field>
+      <Field label={dict.admin.stores.loginEmail} error={fieldError(dict, form.formState.errors.loginEmail?.message)}>
+        <Input {...form.register("loginEmail")} type="email" inputMode="email" autoComplete="off" placeholder="marisa@gmail.com" />
+      </Field>
       <Field label={dict.admin.stores.address} error={fieldError(dict, form.formState.errors.addressLine?.message)}>
         <Input {...form.register("addressLine")} placeholder="Brgy. Ibabang Dupay, Lucena" />
       </Field>

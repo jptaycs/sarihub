@@ -33,6 +33,11 @@ export const tl = {
     phoneLabel: "Numero ng mobile",
     sendCode: "Magpadala ng code",
     sending: "Pinapadala…",
+    or: "o",
+    continueWithGoogle: "Magpatuloy gamit ang Google",
+    continueWithFacebook: "Magpatuloy gamit ang Facebook",
+    redirecting: "Sandali lang po…",
+    oauthFailed: "Hindi natuloy ang pag-sign in. Subukan ulit, o gamitin ang mobile number.",
     helpLine: "May problema po? Tawagan:",
     invalidPhone: "Ipasok po ang inyong mobile number.",
     errors: {
@@ -205,6 +210,8 @@ export const tl = {
       invalidPhone: "Hindi tama ang numero. Ipasok ang 10-digit na mobile.",
       noAccountForPhone:
         "Walang account ang numerong iyan. Papag-sign-in-in muna ang may-ari sa app (OTP), saka ulitin.",
+      noAccountForEmail:
+        "Walang account ang email na iyan. Papag-sign-in-in muna siya gamit ang Google o Facebook, saka ulitin.",
       phoneIsStaff: "Staff ang account na iyan — hindi pwedeng maging may-ari ng tindahan.",
       storeAlreadyExists: "May tindahan na ang numero o account na iyan.",
       staffNotFound: "Hindi mahanap ang staff.",
@@ -328,6 +335,7 @@ export const tl = {
       close: "Isara",
       storeName: "Pangalan ng tindahan",
       ownerName: "Pangalan ng may-ari",
+      loginEmail: "Email sa Google/Facebook (kung hindi sa numero nagsa-sign in)",
       ownerMobile: "Mobile ng may-ari",
       address: "Address",
       route: "Ruta",
@@ -350,6 +358,7 @@ export const tl = {
         "Kailangang naka-sign in na ang tao sa app kahit isang beses (phone OTP) bago siya ma-rehistro bilang staff.",
       empty: "Wala pang staff.",
       name: "Pangalan",
+      loginEmail: "Email sa Google/Facebook (kung hindi sa numero nagsa-sign in)",
       mobile: "Mobile",
       role: "Papel",
       active: "Aktibo",
@@ -583,6 +592,7 @@ export const tl = {
     priceTooLarge: "Masyadong malaki ang presyo — pakisuri po.",
     percentRange: "Sa pagitan ng 0 at 100 lang po ang porsyento.",
     amountInvalid: "Lagyan po ng tamang halaga.",
+    email: "Hindi tamang email address.",
   },
   productCategories: {
     gulay: "Gulay",

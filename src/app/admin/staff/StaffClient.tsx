@@ -204,6 +204,13 @@ function CreateStaffForm(props: { onDone: () => void }) {
       <Field label={dict.admin.staff.role}>
         <RoleSelect value={form.watch("role")} onChange={(r) => form.setValue("role", r)} />
       </Field>
+      <Field
+        label={dict.admin.staff.loginEmail}
+        className="sm:col-span-2"
+        error={fieldError(dict, form.formState.errors.loginEmail?.message)}
+      >
+        <Input {...form.register("loginEmail")} type="email" inputMode="email" autoComplete="off" placeholder="juan@gmail.com" />
+      </Field>
 
       {create.error && (
         <p role="alert" className="text-[14px] font-medium text-danger sm:col-span-2">

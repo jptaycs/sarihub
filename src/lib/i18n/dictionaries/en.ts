@@ -30,6 +30,11 @@ export const en: Dictionary = {
     phoneLabel: "Mobile number",
     sendCode: "Send code",
     sending: "Sending…",
+    or: "or",
+    continueWithGoogle: "Continue with Google",
+    continueWithFacebook: "Continue with Facebook",
+    redirecting: "One moment…",
+    oauthFailed: "Sign-in didn't go through. Try again, or use your mobile number.",
     helpLine: "Having trouble? Call:",
     invalidPhone: "Please enter your mobile number.",
     errors: {
@@ -202,6 +207,8 @@ export const en: Dictionary = {
       invalidPhone: "That number isn't right. Enter a 10-digit mobile number.",
       noAccountForPhone:
         "There's no account for that number. Have the owner sign in to the app first (OTP), then try again.",
+      noAccountForEmail:
+        "There's no account for that email. Have them sign in with Google or Facebook first, then try again.",
       phoneIsStaff: "That account belongs to staff — it can't also own a store.",
       storeAlreadyExists: "That number or account already has a store.",
       staffNotFound: "Staff member not found.",
@@ -325,6 +332,7 @@ export const en: Dictionary = {
       close: "Close",
       storeName: "Store name",
       ownerName: "Owner's name",
+      loginEmail: "Google/Facebook email (if they don't sign in by phone)",
       ownerMobile: "Owner's mobile",
       address: "Address",
       route: "Route",
@@ -347,6 +355,7 @@ export const en: Dictionary = {
         "The person must have signed in to the app at least once (phone OTP) before they can be registered as staff.",
       empty: "No staff yet.",
       name: "Name",
+      loginEmail: "Google/Facebook email (if they don't sign in by phone)",
       mobile: "Mobile",
       role: "Role",
       active: "Active",
@@ -580,6 +589,7 @@ export const en: Dictionary = {
     priceTooLarge: "That price is too large — please check it.",
     percentRange: "Percent must be between 0 and 100.",
     amountInvalid: "Enter a valid amount.",
+    email: "That isn't a valid email address.",
   },
   productCategories: {
     gulay: "Vegetables",

@@ -28,6 +28,7 @@ import {
   stores,
   sukiLedger,
 } from "~/server/db/schema";
+import { findAuthUserId } from "~/server/services/authUsers";
 import { importCatalogCsv } from "~/server/services/catalogImport";
 import { advanceOrderStatus, throwAdvanceError } from "~/server/services/orders";
 import { adminProcedure, router } from "~/server/trpc/init";
@@ -344,14 +345,14 @@ const storesAdminRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: dict.invalidPhone });
     }
 
-    // Supabase stores auth.users.phone without the leading "+".
-    const authUsers = await ctx.db.execute<{ id: string }>(
-      sql`SELECT id FROM auth.users WHERE phone = ${phoneE164.slice(1)} LIMIT 1`,
-    );
-    const authUser = authUsers[0];
-    if (!authUser) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.noAccountForPhone });
+    const authUserId = await findAuthUserId(ctx.db, { phoneE164, email: input.loginEmail });
+    if (!authUserId) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: input.loginEmail ? dict.noAccountForEmail : dict.noAccountForPhone,
+      });
     }
+    const authUser = { id: authUserId };
 
     const [existingStaff] = await ctx.db
       .select({ id: staff.id })
@@ -437,13 +438,14 @@ const staffAdminRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: dict.invalidPhone });
     }
 
-    const authUsers = await ctx.db.execute<{ id: string }>(
-      sql`SELECT id FROM auth.users WHERE phone = ${phoneE164.slice(1)} LIMIT 1`,
-    );
-    const authUser = authUsers[0];
-    if (!authUser) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: dict.noAccountForPhone });
+    const authUserId = await findAuthUserId(ctx.db, { phoneE164, email: input.loginEmail });
+    if (!authUserId) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: input.loginEmail ? dict.noAccountForEmail : dict.noAccountForPhone,
+      });
     }
+    const authUser = { id: authUserId };
 
     const [ownsStore] = await ctx.db
       .select({ id: stores.id })

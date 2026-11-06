@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ShoppingBag } from "lucide-react";
 
 import { LanguageSwitcher } from "~/components/ui/LanguageSwitcher";
+import { getEnabledOAuthProviders } from "~/lib/auth/oauthSettings";
 import { Logo } from "~/components/ui/Logo";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
@@ -10,14 +11,17 @@ import { SUPPORT_PHONE } from "~/lib/support";
 
 import { DevLoginButtons } from "./DevLoginButtons";
 import { PhoneEntryForm } from "./PhoneEntryForm";
+import { SocialSignIn } from "./SocialSignIn";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const dict = getDictionary(await getServerLocale());
-  const next = safeNext((await searchParams).next);
+  const params = await searchParams;
+  const next = safeNext(params.next);
+  const providers = await getEnabledOAuthProviders();
   const fromCheckout = next.includes("checkout=1");
 
   return (
@@ -48,6 +52,8 @@ export default async function LoginPage({
       <p className="mt-3 text-[16px] leading-[1.5] text-ink-2">{dict.login.subtitle}</p>
 
       <PhoneEntryForm next={next} />
+
+      <SocialSignIn providers={providers} next={next} failed={params.error === "oauth"} />
 
       {process.env.NODE_ENV !== "production" && <DevLoginButtons next={next} />}
 
