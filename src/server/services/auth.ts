@@ -140,6 +140,7 @@ export async function signUpWithPassword(
       weak_password: dict.weakPassword,
       rate_limited: dict.rateLimited,
       wrong_password: dict.failed,
+      same_password: dict.failed,
       failed: dict.failed,
     }[reason];
     return { ok: false, message };
@@ -161,6 +162,22 @@ export async function signInWithPhonePassword(
   if (!error) return { ok: true };
   const reason = classifyPasswordAuthError(error);
   if (reason === "wrong_password") return { ok: false, message: dict.wrongPassword };
+  if (reason === "rate_limited") return { ok: false, message: dict.rateLimited };
+  return { ok: false, message: dict.failed };
+}
+
+/** Adds or changes the signed-in person's password (number + password sign-in). */
+export async function setOwnPassword(
+  password: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<PasswordAuthResult> {
+  const dict = getDictionary(locale).profile.passwordErrors;
+  const supabase = await createSupabaseServer();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (!error) return { ok: true };
+  const reason = classifyPasswordAuthError(error);
+  if (reason === "weak_password") return { ok: false, message: dict.weakPassword };
+  if (reason === "same_password") return { ok: false, message: dict.samePassword };
   if (reason === "rate_limited") return { ok: false, message: dict.rateLimited };
   return { ok: false, message: dict.failed };
 }

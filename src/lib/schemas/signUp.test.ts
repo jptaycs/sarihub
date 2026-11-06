@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyPasswordAuthError, signUpInput } from "./signUp";
+import { classifyPasswordAuthError, setPasswordInput, signUpInput } from "./signUp";
 
 const valid = {
   fullName: "Nena Reyes",
@@ -60,5 +60,21 @@ describe("classifyPasswordAuthError", () => {
 
   it("falls back to failed", () => {
     expect(classifyPasswordAuthError({ status: 500, message: "boom" })).toBe("failed");
+  });
+});
+
+describe("setPasswordInput", () => {
+  it("uses the same rules as sign-up", () => {
+    expect(setPasswordInput.safeParse({ password: "sari2026!", confirmPassword: "sari2026!" }).success).toBe(true);
+    const short = setPasswordInput.safeParse({ password: "abc", confirmPassword: "abc" });
+    expect(short.success ? [] : short.error.issues.map((i) => i.message)).toEqual(["validation.passwordTooShort"]);
+    const diff = setPasswordInput.safeParse({ password: "sari2026!", confirmPassword: "sari2026?" });
+    expect(diff.success ? [] : diff.error.issues.map((i) => i.message)).toEqual(["validation.passwordMismatch"]);
+  });
+});
+
+describe("classifyPasswordAuthError on a password change", () => {
+  it("spots reusing the current password", () => {
+    expect(classifyPasswordAuthError({ code: "same_password", message: "" })).toBe("same_password");
   });
 });

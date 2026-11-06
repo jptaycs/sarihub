@@ -47,6 +47,22 @@ export const signUpInput = z
   }));
 export type SignUpInput = z.infer<typeof signUpInput>;
 
+/** Signed-in people (SMS-code or Google accounts) adding or changing a password on /profile. */
+export const setPasswordInput = z
+  .object({
+    password: z.string().min(PASSWORD_MIN_LENGTH, validationMessage("passwordTooShort")).max(72),
+    confirmPassword: z.string(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.password !== v.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: validationMessage("passwordMismatch"),
+      });
+    }
+  });
+
 export const passwordSignInInput = z.object({
   phone: z
     .string()
@@ -59,6 +75,7 @@ export type PasswordAuthFailure =
   | "already_registered"
   | "wrong_password"
   | "weak_password"
+  | "same_password"
   | "rate_limited"
   | "failed";
 
@@ -80,5 +97,6 @@ export function classifyPasswordAuthError(error: {
     return "wrong_password";
   }
   if (error.code === "weak_password") return "weak_password";
+  if (error.code === "same_password") return "same_password";
   return "failed";
 }

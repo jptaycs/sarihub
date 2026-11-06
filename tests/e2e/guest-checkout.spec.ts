@@ -25,6 +25,10 @@ test("guest browses, fills a cart, and is sent to sign-in only at checkout", asy
   expect(decodeURIComponent(page.url())).toContain("next=/home?checkout=1");
   await expect(page.getByText("Halos tapos na!", { exact: false })).toBeVisible();
 
+  // New customers can make an account instead, and land back on the cart too.
+  const signUpHref = await page.getByRole("link", { name: "Gumawa ng account" }).getAttribute("href");
+  expect(decodeURIComponent(signUpHref ?? "")).toBe("/signup?next=/home?checkout=1");
+
   // Signing in (dev shortcut) returns to the storefront with the cart reopened.
   await page.getByRole("button", { name: "Mag-login: Sari-Sari Owner" }).click();
   await page.waitForURL("**/home");

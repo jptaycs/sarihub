@@ -4,6 +4,7 @@ import { OwnerTabBar } from "~/components/ui/OwnerTabBar";
 import { PageHeader } from "~/components/ui/PageHeader";
 import { SignOutButton } from "~/components/ui/SignOutButton";
 
+import { SetPasswordCard } from "./SetPasswordCard";
 import { SukiActivity } from "./SukiActivity";
 import { formatPeso, formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
@@ -53,6 +54,8 @@ export default async function ProfilePage() {
             <span className="text-[15px] font-medium">{roleLabel}</span>
           </CardRow>
         </Card>
+
+        {(await getRequestUser())?.phone ? <SetPasswordCard /> : null}
 
         <p className="section-label mb-2 mt-6 px-1">{dict.profile.languageHeading}</p>
         <Card className="px-4 py-3.5">
@@ -129,6 +132,9 @@ export default async function ProfilePage() {
             {dict.profile.noStore}
           </div>
         )}
+
+        {/* Password sign-in is number + password, so it only helps accounts with a phone. */}
+        {user?.phone ? <SetPasswordCard /> : null}
 
         <p className="section-label mb-2 mt-6 px-1">{dict.profile.languageHeading}</p>
         <Card className="px-4 py-3.5">
