@@ -6,6 +6,7 @@ import { formatPhone } from "~/lib/format";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
 import { loginHref, safeNext } from "~/lib/safeNext";
+import { SUPPORT_PHONE } from "~/lib/support";
 
 import { OtpCodeForm } from "./OtpCodeForm";
 
@@ -46,7 +47,10 @@ export default async function VerifyPage({
       <OtpCodeForm phoneE164={e164} next={next} />
 
       <p className="mx-auto mt-auto pt-10 text-center text-[13px] leading-[1.5] text-ink-2">
-        {dict.verify.helpLine} <span className="font-semibold text-ink">0917-555-0188</span>
+        {dict.verify.helpLine}{" "}
+        <a href={`tel:${SUPPORT_PHONE.tel}`} className="font-semibold text-ink">
+          {SUPPORT_PHONE.display}
+        </a>
       </p>
     </main>
   );

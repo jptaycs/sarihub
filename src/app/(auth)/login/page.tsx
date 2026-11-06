@@ -6,6 +6,7 @@ import { Logo } from "~/components/ui/Logo";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { getServerLocale } from "~/lib/i18n/server";
 import { safeNext } from "~/lib/safeNext";
+import { SUPPORT_PHONE } from "~/lib/support";
 
 import { DevLoginButtons } from "./DevLoginButtons";
 import { PhoneEntryForm } from "./PhoneEntryForm";
@@ -51,7 +52,10 @@ export default async function LoginPage({
       {process.env.NODE_ENV !== "production" && <DevLoginButtons next={next} />}
 
       <p className="mx-auto mt-auto pt-10 text-center text-[13px] leading-[1.5] text-ink-2">
-        {dict.login.helpLine} <span className="font-semibold text-ink">0917-555-0188</span>
+        {dict.login.helpLine}{" "}
+        <a href={`tel:${SUPPORT_PHONE.tel}`} className="font-semibold text-ink">
+          {SUPPORT_PHONE.display}
+        </a>
       </p>
     </main>
   );
