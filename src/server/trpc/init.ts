@@ -1,6 +1,7 @@
 import "server-only";
 
 import { TRPCError, initTRPC } from "@trpc/server";
+import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import superjson from "superjson";
 import { ZodError } from "zod";
@@ -9,8 +10,8 @@ import { db } from "~/server/db";
 import { staff } from "~/server/db/schema";
 import { createSupabaseServer } from "~/lib/supabase/server";
 import { getDictionary } from "~/lib/i18n/dictionaries";
-import { getServerLocale } from "~/lib/i18n/server";
-import { DEFAULT_LOCALE } from "~/lib/i18n/locale";
+import { getAreaLocale } from "~/lib/i18n/server";
+import { DEFAULT_LOCALE, LOCALE_AREA_HEADER } from "~/lib/i18n/locale";
 
 import { zodErrorMessage } from "./zodMessage";
 
@@ -19,7 +20,8 @@ export async function createTRPCContext() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const locale = await getServerLocale();
+  const area = (await headers()).get(LOCALE_AREA_HEADER) === "admin" ? "admin" : "app";
+  const locale = await getAreaLocale(area);
   return { db, supabase, user, locale };
 }
 

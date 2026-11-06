@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { LanguageSwitcher } from "~/components/ui/LanguageSwitcher";
 import { Wordmark } from "~/components/ui/Logo";
 import { cn } from "~/lib/cn";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
@@ -103,7 +104,10 @@ export function AdminSidebar(props: { staffName: string }) {
       </div>
       <nav className="mt-2 flex flex-col gap-1">{extraLinks(dict).map(item)}</nav>
 
-      <div className="mt-auto rounded-lg bg-bg px-3 py-3">
+      <div className="mt-auto px-3 pb-3">
+        <LanguageSwitcher />
+      </div>
+      <div className="rounded-lg bg-bg px-3 py-3">
         <StaffBadge staffName={props.staffName} />
       </div>
     </aside>
@@ -205,6 +209,9 @@ export function AdminTabBar(props: { staffName: string }) {
                 </Link>
               );
             })}
+          </div>
+          <div className="mt-4 flex justify-center">
+            <LanguageSwitcher />
           </div>
         </AdminSheet>
       )}

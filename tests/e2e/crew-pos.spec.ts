@@ -91,11 +91,11 @@ test("crew POS: suki sale charges the owner's tab and reduces truck stock", asyn
   await test.step("cleanup: admin reverses the charge on the owner's tab", async () => {
     await staffPage.goto("/admin/suki");
     await staffPage.getByRole("button", { name: /Tindahan ni Suki/ }).first().click();
-    // The adjustment sign defaults to "decrease" (Bawas sa utang).
-    await expect(staffPage.getByRole("button", { name: "Bawas sa utang" })).toBeVisible();
-    await staffPage.getByLabel("Halaga ng adjustment").fill(unitPrice.toFixed(2));
-    await staffPage.getByPlaceholder(/^Dahilan/).fill("e2e cleanup: ibinalik ang test sale");
-    await staffPage.getByRole("button", { name: "Itala ang adjustment" }).click();
+    // /admin is English by default; the adjustment sign defaults to "decrease".
+    await expect(staffPage.getByRole("button", { name: "Reduce the balance" })).toBeVisible();
+    await staffPage.getByLabel("Adjustment amount").fill(unitPrice.toFixed(2));
+    await staffPage.getByPlaceholder(/^Reason/).fill("e2e cleanup: ibinalik ang test sale");
+    await staffPage.getByRole("button", { name: "Record adjustment" }).click();
     await expect(staffPage.getByText("e2e cleanup: ibinalik ang test sale").first()).toBeVisible();
 
     await ownerPage.goto("/home");

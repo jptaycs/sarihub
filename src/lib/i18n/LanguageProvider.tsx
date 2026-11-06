@@ -13,16 +13,22 @@ const LanguageContext = createContext<{
 
 /**
  * Wraps the app with the language chosen on /login (or the Tagalog default).
+ * The admin layout nests a second one with the admin cookie (English default).
  * `initialLocale` comes from the server-read cookie so the first client
  * render matches the server render — no hydration mismatch.
  */
-export function LanguageProvider(props: { initialLocale: Locale; children: React.ReactNode }) {
+export function LanguageProvider(props: {
+  initialLocale: Locale;
+  /** Which cookie the switcher writes: the app-wide one, or the admin console's own. */
+  cookieName?: string;
+  children: React.ReactNode;
+}) {
   const [locale, setLocaleState] = useState(props.initialLocale);
   const router = useRouter();
 
   function setLocale(next: Locale) {
     // A UI preference, not a security boundary — plain cookie write, no round trip.
-    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `${props.cookieName ?? LOCALE_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     setLocaleState(next);
     // Re-render Server Components (page headers, layout chrome) in the new language.
     router.refresh();

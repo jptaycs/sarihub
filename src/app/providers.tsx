@@ -7,7 +7,7 @@ import { useState } from "react";
 import superjson from "superjson";
 
 import { LanguageProvider } from "~/lib/i18n/LanguageProvider";
-import type { Locale } from "~/lib/i18n/locale";
+import { LOCALE_AREA_HEADER, type Locale } from "~/lib/i18n/locale";
 import { PERSIST_MAX_AGE_MS, createCatalogPersister, isPersistedQuery } from "~/lib/queryPersist";
 import { trpc } from "~/lib/trpc/client";
 
@@ -36,6 +36,9 @@ export function Providers({
         httpBatchLink({
           url: "/api/trpc",
           transformer: superjson,
+          // Admin pages have their own language; tell the server which area is asking.
+          headers: () =>
+            window.location.pathname.startsWith("/admin") ? { [LOCALE_AREA_HEADER]: "admin" } : {},
         }),
       ],
     }),
