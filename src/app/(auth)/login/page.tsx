@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { ChevronLeft, ShoppingBag } from "lucide-react";
 
@@ -54,6 +55,24 @@ export default async function LoginPage({
       <PhoneEntryForm next={next} />
 
       <SocialSignIn providers={providers} next={next} failed={params.error === "oauth"} />
+
+      <div className="mt-6 flex flex-col items-center gap-3 text-[15px] text-ink-2">
+        <Link
+          href={`/login/password?next=${encodeURIComponent(next)}` as Route}
+          className="font-semibold text-ink underline underline-offset-2"
+        >
+          {dict.login.usePassword}
+        </Link>
+        <p>
+          {dict.login.noAccount}{" "}
+          <Link
+            href={`/signup?next=${encodeURIComponent(next)}` as Route}
+            className="font-semibold text-ink underline underline-offset-2"
+          >
+            {dict.login.createAccount}
+          </Link>
+        </p>
+      </div>
 
       {process.env.NODE_ENV !== "production" && <DevLoginButtons next={next} />}
 

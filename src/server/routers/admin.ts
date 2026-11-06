@@ -30,6 +30,7 @@ import {
 } from "~/server/db/schema";
 import { findAuthUserId } from "~/server/services/authUsers";
 import { importCatalogCsv } from "~/server/services/catalogImport";
+import { listPendingSignUps } from "~/server/services/pendingSignUps";
 import { advanceOrderStatus, throwAdvanceError } from "~/server/services/orders";
 import { adminProcedure, router } from "~/server/trpc/init";
 
@@ -305,6 +306,8 @@ const sukiAdminRouter = router({
 });
 
 const storesAdminRouter = router({
+  /** Self sign-ups from /signup still waiting for an admin to create their store. */
+  pendingSignUps: adminProcedure.query(({ ctx }) => listPendingSignUps(ctx.db)),
   list: adminProcedure.query(async ({ ctx }) => {
     return ctx.db
       .select({

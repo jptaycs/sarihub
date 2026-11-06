@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { createSupabaseServer } from "~/lib/supabase/server";
 import { parsePhPhone } from "~/lib/format";
 import { classifyOtpSendError } from "~/lib/otpSendError";
+import { classifyPasswordAuthError, type SignUpInput } from "~/lib/schemas/signUp";
 import { getDictionary } from "~/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, type Locale } from "~/lib/i18n/locale";
 import { db } from "~/server/db";
@@ -103,4 +104,63 @@ export async function verifyPhoneOtp(
   }
 
   return { ok: true };
+}
+
+export type PasswordAuthResult = { ok: true } | { ok: false; message: string };
+
+/**
+ * Self sign-up: mobile number + password, no SMS code. The Supabase project
+ * auto-confirms phones, so signUp returns a live session (cookies set by the
+ * server client). Sign-up details ride in user_metadata, where the admin
+ * Stores page finds people still waiting for a store.
+ */
+export async function signUpWithPassword(
+  input: SignUpInput,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<PasswordAuthResult> {
+  const dict = getDictionary(locale).signUp.errors;
+  const supabase = await createSupabaseServer();
+  const { data, error } = await supabase.auth.signUp({
+    phone: input.phoneE164,
+    password: input.password,
+    options: {
+      data: {
+        signup: "self",
+        full_name: input.fullName,
+        store_name: input.storeName,
+        address_line: input.addressLine ?? null,
+      },
+    },
+  });
+
+  if (error) {
+    const reason = classifyPasswordAuthError(error);
+    const message = {
+      already_registered: dict.alreadyRegistered,
+      weak_password: dict.weakPassword,
+      rate_limited: dict.rateLimited,
+      wrong_password: dict.failed,
+      failed: dict.failed,
+    }[reason];
+    return { ok: false, message };
+  }
+  // No session means the project started requiring phone confirmation —
+  // which needs an SMS provider this deployment doesn't have.
+  if (!data.session) return { ok: false, message: dict.failed };
+  return { ok: true };
+}
+
+export async function signInWithPhonePassword(
+  phoneE164: string,
+  password: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<PasswordAuthResult> {
+  const dict = getDictionary(locale).login.passwordErrors;
+  const supabase = await createSupabaseServer();
+  const { error } = await supabase.auth.signInWithPassword({ phone: phoneE164, password });
+  if (!error) return { ok: true };
+  const reason = classifyPasswordAuthError(error);
+  if (reason === "wrong_password") return { ok: false, message: dict.wrongPassword };
+  if (reason === "rate_limited") return { ok: false, message: dict.rateLimited };
+  return { ok: false, message: dict.failed };
 }

@@ -10,7 +10,7 @@ export function safeNext(raw: unknown, fallback: Route = "/home"): Route {
   if (typeof raw !== "string" || raw.length === 0 || raw.length > 512) return fallback;
   if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return fallback;
   if (/[\u0000-\u001f]/.test(raw)) return fallback;
-  if (raw.startsWith("/login") || raw.startsWith("/verify")) return fallback;
+  if (raw.startsWith("/login") || raw.startsWith("/signup") || raw.startsWith("/verify")) return fallback;
   // Validated above as a same-origin path; typed routes can't know it statically.
   return raw as Route;
 }

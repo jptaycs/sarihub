@@ -21,5 +21,6 @@ describe("safeNext", () => {
     expect(safeNext("")).toBe("/home");
     expect(safeNext("/login?next=/x")).toBe("/home");
     expect(safeNext("/verify")).toBe("/home");
+    expect(safeNext("/signup?next=/x")).toBe("/home");
   });
 });

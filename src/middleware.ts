@@ -35,7 +35,10 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/verify") || pathname.startsWith("/auth");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/verify") ||
+    pathname.startsWith("/auth");
   // /offline stays public so the service worker can precache it before sign-in.
   // Every /api/* route enforces its own auth and returns its own response
   // format (tRPC's protectedProcedure throws a proper JSON UNAUTHORIZED;
@@ -62,7 +65,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname.startsWith("/login")) {
+  if (user && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
     const target = safeNext(request.nextUrl.searchParams.get("next"));
     return NextResponse.redirect(new URL(target, request.url));
   }

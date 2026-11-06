@@ -12,10 +12,11 @@ import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { cn } from "~/lib/cn";
+import { formatManila } from "~/lib/datetime";
 import { formatPeso, formatPhone, pesosToCentavos } from "~/lib/format";
 import type { Dictionary } from "~/lib/i18n/dictionaries";
 import { interpolate } from "~/lib/i18n/interpolate";
-import { useDictionary } from "~/lib/i18n/LanguageProvider";
+import { useDictionary, useLocale } from "~/lib/i18n/LanguageProvider";
 import { fieldError } from "~/lib/i18n/validation";
 import {
   createStoreInput,
@@ -55,7 +56,9 @@ export function StoresClient() {
   const dict = useDictionary();
   const storesQuery = trpc.admin.stores.list.useQuery();
   const routesQuery = trpc.admin.stores.routes.useQuery();
-  const [creating, setCreating] = useState(false);
+  const pendingQuery = trpc.admin.stores.pendingSignUps.useQuery();
+  // `true` = blank form; an object = prefilled from a self sign-up.
+  const [creating, setCreating] = useState<false | true | Partial<CreateStoreInput>>(false);
 
   if (storesQuery.isLoading || routesQuery.isLoading) return <LoadingState />;
   if (storesQuery.error || routesQuery.error || !storesQuery.data || !routesQuery.data) {
@@ -83,8 +86,26 @@ export function StoresClient() {
           wide
           onClose={() => setCreating(false)}
         >
-          <CreateStoreForm routes={routes} onDone={() => setCreating(false)} />
+          <CreateStoreForm
+            routes={routes}
+            initial={creating === true ? undefined : creating}
+            onDone={() => setCreating(false)}
+          />
         </AdminSheet>
+      )}
+
+      {pendingQuery.data && pendingQuery.data.length > 0 && (
+        <PendingSignUps
+          rows={pendingQuery.data}
+          onMakeStore={(p) =>
+            setCreating({
+              name: p.storeName,
+              ownerName: p.fullName,
+              phone: formatPhone(p.phoneE164),
+              addressLine: p.addressLine ?? undefined,
+            })
+          }
+        />
       )}
 
       {storesQuery.data.length > 0 ? (
@@ -210,8 +231,41 @@ function PesoLimitField(props: {
   );
 }
 
+type PendingSignUpRow = inferRouterOutputs<AppRouter>["admin"]["stores"]["pendingSignUps"][number];
+
+function PendingSignUps(props: { rows: PendingSignUpRow[]; onMakeStore: (row: PendingSignUpRow) => void }) {
+  const dict = useDictionary();
+  const { locale } = useLocale();
+  return (
+    <Card className="mt-6">
+      <div className="hair-b px-5 py-4">
+        <h2 className="text-[17px] font-semibold">{dict.admin.stores.pendingTitle}</h2>
+        <p className="mt-1 text-[14px] text-ink-2">{dict.admin.stores.pendingHint}</p>
+      </div>
+      {props.rows.map((row) => (
+        <div key={row.userId} className="hair-b flex flex-wrap items-center gap-3 px-5 py-4 last:border-b-0">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[15px] font-semibold">{row.storeName}</p>
+            <p className="truncate text-[13px] text-ink-2">
+              {row.fullName} · {formatPhone(row.phoneE164)}
+              {row.addressLine ? ` · ${row.addressLine}` : ""}
+            </p>
+            <p className="text-[12px] text-ink-3">
+              {interpolate(dict.admin.stores.signedUpOn, { date: formatManila(row.signedUpAt, "d MMM, h:mm a", locale) })}
+            </p>
+          </div>
+          <Button variant="secondary" onClick={() => props.onMakeStore(row)}>
+            {dict.admin.stores.makeStore}
+          </Button>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 function CreateStoreForm(props: {
   routes: Array<{ id: string; name: string }>;
+  initial?: Partial<CreateStoreInput>;
   onDone: () => void;
 }) {
   const dict = useDictionary();
@@ -219,6 +273,7 @@ function CreateStoreForm(props: {
   const create = trpc.admin.stores.create.useMutation({
     onSuccess() {
       void utils.admin.stores.list.invalidate();
+      void utils.admin.stores.pendingSignUps.invalidate();
       void utils.admin.suki.exposure.invalidate();
       props.onDone();
     },
@@ -227,7 +282,14 @@ function CreateStoreForm(props: {
   const [limitDraft, setLimitDraft] = useState("2000");
   const form = useForm<CreateStoreInput>({
     resolver: zodResolver(createStoreInput),
-    defaultValues: { routeId: null, stopOrder: null, lat: null, lng: null, sukiLimitCentavos: 200000 },
+    defaultValues: {
+      routeId: null,
+      stopOrder: null,
+      lat: null,
+      lng: null,
+      sukiLimitCentavos: 200000,
+      ...props.initial,
+    },
   });
   const lat = form.watch("lat");
   const lng = form.watch("lng");
